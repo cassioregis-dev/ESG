@@ -286,7 +286,6 @@ app.get('/api/admin/export.csv', requireAdmin, async (req, res) => {
     res.status(500).json({ error: 'Erro interno ao exportar CSV' });
   }
 });
-});
 
 // ---------- Static frontend ----------
 app.use(express.static(path.join(__dirname, 'public')));
