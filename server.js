@@ -259,17 +259,22 @@ app.get('/api/admin/export.csv', requireAdmin, async (req, res) => {
   try {
     const { rows } = await pool.query(`
       SELECT l.empresa, l.razao_social, l.cnpj, l.respondente, l.email, l.telefone, l.cidade, l.estado, l.segmento,
-             s.nota_final, s.classificacao, s.created_at
+             s.nota_final, s.classificacao, s.pilares_json, s.created_at
       FROM submissions s JOIN leads l ON l.id = s.lead_id
       ORDER BY s.created_at DESC
     `);
 
-    const header = ['Empresa', 'Razao Social', 'CNPJ', 'Respondente', 'Email', 'Telefone', 'Cidade', 'Estado', 'Segmento', 'Nota Final (%)', 'Classificacao', 'Data'];
+    const temaHeaders = PILARES_ORDEM.map(nome => `${nome} (%)`);
+    const header = ['Empresa', 'Razao Social', 'CNPJ', 'Respondente', 'Email', 'Telefone', 'Cidade', 'Estado', 'Segmento', 'Nota Final (%)', 'Classificacao', ...temaHeaders, 'Data'];
     const csvLines = [header.join(';')];
     for (const r of rows) {
+      const temasArr = JSON.parse(r.pilares_json);
+      const percentualPorTema = Object.fromEntries(temasArr.map(t => [t.pilar, t.percentual]));
+      const temaValores = PILARES_ORDEM.map(nome => (percentualPorTema[nome] !== undefined ? percentualPorTema[nome] : ''));
+
       csvLines.push([
         r.empresa, r.razao_social, r.cnpj, r.respondente, r.email, r.telefone, r.cidade, r.estado, r.segmento,
-        r.nota_final, r.classificacao, r.created_at,
+        r.nota_final, r.classificacao, ...temaValores, r.created_at,
       ].map(v => `"${String(v).replace(/"/g, '""')}"`).join(';'));
     }
 
@@ -280,6 +285,7 @@ app.get('/api/admin/export.csv', requireAdmin, async (req, res) => {
     console.error(err);
     res.status(500).json({ error: 'Erro interno ao exportar CSV' });
   }
+});
 });
 
 // ---------- Static frontend ----------
