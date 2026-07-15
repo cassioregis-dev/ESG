@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Dados da Empresa — Diagnóstico ESG</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@600;700;800&family=Nunito+Sans:wght@400;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+<header class="topbar">
+  <div class="container">
+    <a href="index.html" class="brand">
+      <svg width="26" height="26" viewBox="0 0 24 24" fill="none"><path d="M12 2C7 6 4 10 4 14a8 8 0 0016 0c0-4-3-8-8-12z" fill="#66bb6a"/><path d="M12 22V10" stroke="#1b5e20" stroke-width="1.5"/></svg>
+      Diagnóstico ESG
+    </a>
+    <nav><a href="admin/login.html">Área do Administrador</a></nav>
+  </div>
+</header>
+
+<section class="section">
+  <div class="container" style="max-width:720px;">
+    <h1>Antes de começar, conte um pouco sobre sua empresa</h1>
+    <p style="color:var(--texto-suave);">Esses dados são usados apenas para identificar seu resultado e para contato futuro. Leva menos de 1 minuto.</p>
+
+    <div class="card" style="margin-top:24px;">
+      <form id="lead-form" novalidate>
+        <div class="form-row">
+          <div class="form-field">
+            <label for="empresa">Nome da Empresa *</label>
+            <input type="text" id="empresa" name="empresa" required>
+          </div>
+          <div class="form-field">
+            <label for="razao_social">Razão Social *</label>
+            <input type="text" id="razao_social" name="razao_social" required>
+          </div>
+        </div>
+
+        <div class="form-row">
+          <div class="form-field">
+            <label for="cnpj">CNPJ *</label>
+            <input type="text" id="cnpj" name="cnpj" placeholder="00.000.000/0000-00" required>
+          </div>
+          <div class="form-field">
+            <label for="respondente">Nome do Respondente *</label>
+            <input type="text" id="respondente" name="respondente" required>
+          </div>
+        </div>
+
+        <div class="form-row">
+          <div class="form-field">
+            <label for="email">E-mail *</label>
+            <input type="email" id="email" name="email" required>
+          </div>
+          <div class="form-field">
+            <label for="telefone">Telefone *</label>
+            <input type="tel" id="telefone" name="telefone" placeholder="(00) 00000-0000" required>
+          </div>
+        </div>
+
+        <div class="form-row">
+          <div class="form-field">
+            <label for="cidade">Cidade *</label>
+            <input type="text" id="cidade" name="cidade" required>
+          </div>
+          <div class="form-field">
+            <label for="estado">Estado *</label>
+            <select id="estado" name="estado" required>
+              <option value="">Selecione...</option>
+              <option>AC</option><option>AL</option><option>AP</option><option>AM</option><option>BA</option>
+              <option>CE</option><option>DF</option><option>ES</option><option>GO</option><option>MA</option>
+              <option>MT</option><option>MS</option><option>MG</option><option>PA</option><option>PB</option>
+              <option>PR</option><option>PE</option><option>PI</option><option>RJ</option><option>RN</option>
+              <option>RS</option><option>RO</option><option>RR</option><option>SC</option><option>SP</option>
+              <option>SE</option><option>TO</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="form-field">
+          <label>Segmento da Empresa *</label>
+          <div class="segmento-options" id="segmento-options">
+            <label class="segmento-opt" data-val="Comércio">
+              <input type="radio" name="segmento" value="Comércio">🏬 Comércio
+            </label>
+            <label class="segmento-opt" data-val="Serviços">
+              <input type="radio" name="segmento" value="Serviços">🤝 Serviços
+            </label>
+            <label class="segmento-opt" data-val="Turismo">
+              <input type="radio" name="segmento" value="Turismo">🧭 Turismo
+            </label>
+          </div>
+        </div>
+
+        <p class="erro-msg" id="erro-msg"></p>
+
+        <button type="submit" class="btn btn-primary btn-block" id="btn-submit" style="margin-top:12px;">
+          Continuar para o diagnóstico →
+        </button>
+      </form>
+    </div>
+  </div>
+</section>
+
+<footer class="site-footer">Diagnóstico ESG · Autoavaliação de Sustentabilidade para Comércio, Serviços e Turismo</footer>
+
+<script>
+document.querySelectorAll('.segmento-opt').forEach(opt => {
+  opt.addEventListener('click', () => {
+    document.querySelectorAll('.segmento-opt').forEach(o => o.classList.remove('selected'));
+    opt.classList.add('selected');
+    opt.querySelector('input').checked = true;
+  });
+});
+
+const form = document.getElementById('lead-form');
+const erroMsg = document.getElementById('erro-msg');
+const btn = document.getElementById('btn-submit');
+
+form.addEventListener('submit', async (e) => {
+  e.preventDefault();
+  erroMsg.style.display = 'none';
+
+  const segmentoEl = form.querySelector('input[name="segmento"]:checked');
+  if (!segmentoEl) {
+    erroMsg.textContent = 'Selecione o segmento da sua empresa.';
+    erroMsg.style.display = 'block';
+    return;
+  }
+
+  const payload = {
+    empresa: form.empresa.value.trim(),
+    razao_social: form.razao_social.value.trim(),
+    cnpj: form.cnpj.value.trim(),
+    respondente: form.respondente.value.trim(),
+    email: form.email.value.trim(),
+    telefone: form.telefone.value.trim(),
+    cidade: form.cidade.value.trim(),
+    estado: form.estado.value,
+    segmento: segmentoEl.value,
+  };
+
+  btn.disabled = true;
+  btn.textContent = 'Enviando...';
+
+  try {
+    const resp = await fetch('/api/leads', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
+    const data = await resp.json();
+    if (!resp.ok) throw new Error(data.error || 'Erro ao enviar dados');
+
+    sessionStorage.setItem('leadId', data.leadId);
+    sessionStorage.setItem('leadEmpresa', payload.empresa);
+    window.location.href = 'assessment.html';
+  } catch (err) {
+    erroMsg.textContent = err.message;
+    erroMsg.style.display = 'block';
+    btn.disabled = false;
+    btn.textContent = 'Continuar para o diagnóstico →';
+  }
+});
+</script>
+
+</body>
+</html>
