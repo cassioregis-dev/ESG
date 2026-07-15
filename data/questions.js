@@ -1,4 +1,4 @@
-javascript// Perguntas do Auto Diagnóstico de Sustentabilidade / ESG
+// Perguntas do Auto Diagnóstico de Sustentabilidade / ESG
 // Extraído de: Questionario_Autodiagnostico_Sustentabilidade.xlsx
 // Cada pergunta tem um peso (relevância) usado no cálculo ponderado da nota.
 
