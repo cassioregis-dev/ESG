@@ -1,0 +1,18 @@
+{
+  "name": "diagnostico-esg",
+  "version": "1.0.0",
+  "description": "Auto diagnostico de Sustentabilidade / ESG para empresas de Comercio, Servicos e Turismo",
+  "main": "server.js",
+  "engines": {
+    "node": ">=22.5.0"
+  },
+  "scripts": {
+    "start": "node server.js"
+  },
+  "license": "UNLICENSED",
+  "dependencies": {
+    "dotenv": "^16.4.5",
+    "express": "^4.19.2",
+    "express-session": "^1.18.0"
+  }
+}
