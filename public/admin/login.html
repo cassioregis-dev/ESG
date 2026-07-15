@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Login Administrador — Diagnóstico ESG</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@600;700;800&family=Nunito+Sans:wght@400;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../css/style.css">
+</head>
+<body>
+
+<header class="topbar">
+  <div class="container">
+    <a href="../index.html" class="brand">
+      <svg width="26" height="26" viewBox="0 0 24 24" fill="none"><path d="M12 2C7 6 4 10 4 14a8 8 0 0016 0c0-4-3-8-8-12z" fill="#66bb6a"/><path d="M12 22V10" stroke="#1b5e20" stroke-width="1.5"/></svg>
+      Diagnóstico ESG
+    </a>
+  </div>
+</header>
+
+<div class="login-wrap">
+  <div class="card login-card">
+    <h2 style="text-align:center;">Área do Administrador</h2>
+    <p style="color:var(--texto-suave); text-align:center; font-size:.9rem;">Acesse para ver as estatísticas de todas as empresas.</p>
+    <form id="login-form">
+      <div class="form-field">
+        <label for="username">Usuário</label>
+        <input type="text" id="username" name="username" required autofocus>
+      </div>
+      <div class="form-field">
+        <label for="password">Senha</label>
+        <input type="password" id="password" name="password" required>
+      </div>
+      <p class="erro-msg" id="erro-msg"></p>
+      <button type="submit" class="btn btn-primary btn-block" id="btn-entrar">Entrar</button>
+    </form>
+  </div>
+</div>
+
+<script>
+document.getElementById('login-form').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const erroMsg = document.getElementById('erro-msg');
+  const btn = document.getElementById('btn-entrar');
+  erroMsg.style.display = 'none';
+  btn.disabled = true; btn.textContent = 'Entrando...';
+
+  try {
+    const resp = await fetch('/api/admin/login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ username: username.value, password: password.value }),
+    });
+    const data = await resp.json();
+    if (!resp.ok) throw new Error(data.error || 'Falha no login');
+    window.location.href = 'dashboard.html';
+  } catch (err) {
+    erroMsg.textContent = err.message;
+    erroMsg.style.display = 'block';
+    btn.disabled = false; btn.textContent = 'Entrar';
+  }
+});
+</script>
+
+</body>
+</html>
