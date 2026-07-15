@@ -3,7 +3,7 @@ const path = require('path');
 const express = require('express');
 const session = require('express-session');
 
-const db = require('./db/init');
+const { pool, initDb } = require('./db/init');
 const { QUESTIONS, ESCALA, PILARES_ORDEM, classificar, PONTUACAO_MAXIMA } = require('./data/questions');
 
 const app = express();
@@ -18,7 +18,6 @@ app.use(session({
 }));
 
 // ---------- Helpers ----------
-const QUESTIONS_BY_ID = Object.fromEntries(QUESTIONS.map(q => [q.id, q]));
 
 function requireAdmin(req, res, next) {
   if (req.session && req.session.isAdmin) return next();
@@ -68,76 +67,96 @@ app.get('/api/questions', (req, res) => {
   res.json({ questions: QUESTIONS, escala: ESCALA, pilares: PILARES_ORDEM });
 });
 
-app.post('/api/leads', (req, res) => {
-  const { empresa, razao_social, cnpj, respondente, email, telefone, cidade, estado, segmento } = req.body || {};
+app.post('/api/leads', async (req, res) => {
+  try {
+    const { empresa, razao_social, cnpj, respondente, email, telefone, cidade, estado, segmento } = req.body || {};
 
-  const required = { empresa, razao_social, cnpj, respondente, email, telefone, cidade, estado, segmento };
-  for (const [key, val] of Object.entries(required)) {
-    if (!val || String(val).trim() === '') {
-      return res.status(400).json({ error: `Campo obrigatório ausente: ${key}` });
+    const required = { empresa, razao_social, cnpj, respondente, email, telefone, cidade, estado, segmento };
+    for (const [key, val] of Object.entries(required)) {
+      if (!val || String(val).trim() === '') {
+        return res.status(400).json({ error: `Campo obrigatório ausente: ${key}` });
+      }
     }
-  }
-  const segmentosValidos = ['Comércio', 'Serviços', 'Turismo'];
-  if (!segmentosValidos.includes(segmento)) {
-    return res.status(400).json({ error: 'Segmento inválido' });
-  }
+    const segmentosValidos = ['Comércio', 'Serviços', 'Turismo'];
+    if (!segmentosValidos.includes(segmento)) {
+      return res.status(400).json({ error: 'Segmento inválido' });
+    }
 
-  const stmt = db.prepare(`
-    INSERT INTO leads (empresa, razao_social, cnpj, respondente, email, telefone, cidade, estado, segmento)
-    VALUES (@empresa, @razao_social, @cnpj, @respondente, @email, @telefone, @cidade, @estado, @segmento)
-  `);
-  const info = stmt.run({ empresa, razao_social, cnpj, respondente, email, telefone, cidade, estado, segmento });
+    const result = await pool.query(
+      `INSERT INTO leads (empresa, razao_social, cnpj, respondente, email, telefone, cidade, estado, segmento)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) RETURNING id`,
+      [empresa, razao_social, cnpj, respondente, email, telefone, cidade, estado, segmento]
+    );
 
-  res.json({ leadId: info.lastInsertRowid });
+    res.json({ leadId: result.rows[0].id });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Erro interno ao salvar lead' });
+  }
 });
 
-app.post('/api/submit', (req, res) => {
-  const { leadId, respostas } = req.body || {};
-  if (!leadId) return res.status(400).json({ error: 'leadId é obrigatório' });
-  const lead = db.prepare('SELECT * FROM leads WHERE id = ?').get(leadId);
-  if (!lead) return res.status(404).json({ error: 'Lead não encontrado' });
-  if (!respostas || typeof respostas !== 'object') {
-    return res.status(400).json({ error: 'respostas é obrigatório' });
+app.post('/api/submit', async (req, res) => {
+  try {
+    const { leadId, respostas } = req.body || {};
+    if (!leadId) return res.status(400).json({ error: 'leadId é obrigatório' });
+
+    const leadResult = await pool.query('SELECT * FROM leads WHERE id = $1', [leadId]);
+    const lead = leadResult.rows[0];
+    if (!lead) return res.status(404).json({ error: 'Lead não encontrado' });
+
+    if (!respostas || typeof respostas !== 'object') {
+      return res.status(400).json({ error: 'respostas é obrigatório' });
+    }
+    const faltando = QUESTIONS.filter(q => !(q.id in respostas));
+    if (faltando.length > 0) {
+      return res.status(400).json({ error: 'Existem perguntas não respondidas', faltando: faltando.map(q => q.id) });
+    }
+
+    const resultado = computeScore(respostas);
+
+    const insertResult = await pool.query(
+      `INSERT INTO submissions (lead_id, pontos_obtidos, pontos_maximo, nota_final, classificacao, pilares_json, respostas_json)
+       VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING id`,
+      [
+        leadId,
+        resultado.pontosObtidos,
+        resultado.pontosMaximo,
+        resultado.notaFinal,
+        resultado.classificacao,
+        JSON.stringify(resultado.pilares),
+        JSON.stringify(resultado.respostas),
+      ]
+    );
+
+    res.json({ submissionId: insertResult.rows[0].id, resultado });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Erro interno ao salvar respostas' });
   }
-  // valida que todas as perguntas foram respondidas
-  const faltando = QUESTIONS.filter(q => !(q.id in respostas));
-  if (faltando.length > 0) {
-    return res.status(400).json({ error: 'Existem perguntas não respondidas', faltando: faltando.map(q => q.id) });
-  }
-
-  const resultado = computeScore(respostas);
-
-  const stmt = db.prepare(`
-    INSERT INTO submissions (lead_id, pontos_obtidos, pontos_maximo, nota_final, classificacao, pilares_json, respostas_json)
-    VALUES (?, ?, ?, ?, ?, ?, ?)
-  `);
-  const info = stmt.run(
-    leadId,
-    resultado.pontosObtidos,
-    resultado.pontosMaximo,
-    resultado.notaFinal,
-    resultado.classificacao,
-    JSON.stringify(resultado.pilares),
-    JSON.stringify(resultado.respostas)
-  );
-
-  res.json({ submissionId: info.lastInsertRowid, resultado });
 });
 
-app.get('/api/result/:id', (req, res) => {
-  const submission = db.prepare('SELECT * FROM submissions WHERE id = ?').get(req.params.id);
-  if (!submission) return res.status(404).json({ error: 'Resultado não encontrado' });
-  const lead = db.prepare('SELECT * FROM leads WHERE id = ?').get(submission.lead_id);
+app.get('/api/result/:id', async (req, res) => {
+  try {
+    const subResult = await pool.query('SELECT * FROM submissions WHERE id = $1', [req.params.id]);
+    const submission = subResult.rows[0];
+    if (!submission) return res.status(404).json({ error: 'Resultado não encontrado' });
 
-  res.json({
-    lead: lead ? { empresa: lead.empresa, segmento: lead.segmento, cidade: lead.cidade, estado: lead.estado } : null,
-    pontosObtidos: submission.pontos_obtidos,
-    pontosMaximo: submission.pontos_maximo,
-    notaFinal: submission.nota_final,
-    classificacao: submission.classificacao,
-    pilares: JSON.parse(submission.pilares_json),
-    createdAt: submission.created_at,
-  });
+    const leadResult = await pool.query('SELECT * FROM leads WHERE id = $1', [submission.lead_id]);
+    const lead = leadResult.rows[0];
+
+    res.json({
+      lead: lead ? { empresa: lead.empresa, segmento: lead.segmento, cidade: lead.cidade, estado: lead.estado } : null,
+      pontosObtidos: Number(submission.pontos_obtidos),
+      pontosMaximo: Number(submission.pontos_maximo),
+      notaFinal: Number(submission.nota_final),
+      classificacao: submission.classificacao,
+      pilares: JSON.parse(submission.pilares_json),
+      createdAt: submission.created_at,
+    });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Erro interno ao buscar resultado' });
+  }
 });
 
 // ---------- Admin auth ----------
@@ -165,98 +184,115 @@ app.get('/api/admin/check', (req, res) => {
 
 // ---------- Admin data ----------
 
-app.get('/api/admin/stats', requireAdmin, (req, res) => {
-  const rows = db.prepare(`
-    SELECT s.id as submission_id, s.nota_final, s.classificacao, s.pontos_obtidos, s.pontos_maximo,
-           s.pilares_json, s.created_at as submitted_at,
-           l.id as lead_id, l.empresa, l.razao_social, l.cnpj, l.respondente, l.email, l.telefone,
-           l.cidade, l.estado, l.segmento, l.created_at as lead_created_at
-    FROM submissions s
-    JOIN leads l ON l.id = s.lead_id
-    ORDER BY s.created_at DESC
-  `).all();
+app.get('/api/admin/stats', requireAdmin, async (req, res) => {
+  try {
+    const { rows } = await pool.query(`
+      SELECT s.id as submission_id, s.nota_final, s.classificacao, s.pontos_obtidos, s.pontos_maximo,
+             s.pilares_json, s.created_at as submitted_at,
+             l.id as lead_id, l.empresa, l.razao_social, l.cnpj, l.respondente, l.email, l.telefone,
+             l.cidade, l.estado, l.segmento, l.created_at as lead_created_at
+      FROM submissions s
+      JOIN leads l ON l.id = s.lead_id
+      ORDER BY s.created_at DESC
+    `);
 
-  const submissions = rows.map(r => ({
-    submissionId: r.submission_id,
-    notaFinal: r.nota_final,
-    classificacao: r.classificacao,
-    pontosObtidos: r.pontos_obtidos,
-    pontosMaximo: r.pontos_maximo,
-    pilares: JSON.parse(r.pilares_json),
-    submittedAt: r.submitted_at,
-    lead: {
-      id: r.lead_id, empresa: r.empresa, razaoSocial: r.razao_social, cnpj: r.cnpj,
-      respondente: r.respondente, email: r.email, telefone: r.telefone,
-      cidade: r.cidade, estado: r.estado, segmento: r.segmento, createdAt: r.lead_created_at,
-    },
-  }));
+    const submissions = rows.map(r => ({
+      submissionId: r.submission_id,
+      notaFinal: Number(r.nota_final),
+      classificacao: r.classificacao,
+      pontosObtidos: Number(r.pontos_obtidos),
+      pontosMaximo: Number(r.pontos_maximo),
+      pilares: JSON.parse(r.pilares_json),
+      submittedAt: r.submitted_at,
+      lead: {
+        id: r.lead_id, empresa: r.empresa, razaoSocial: r.razao_social, cnpj: r.cnpj,
+        respondente: r.respondente, email: r.email, telefone: r.telefone,
+        cidade: r.cidade, estado: r.estado, segmento: r.segmento, createdAt: r.lead_created_at,
+      },
+    }));
 
-  // agregados
-  const totalRespondentes = submissions.length;
-  const mediaNotaFinal = totalRespondentes > 0
-    ? Math.round((submissions.reduce((s, x) => s + x.notaFinal, 0) / totalRespondentes) * 10) / 10
-    : 0;
+    const totalRespondentes = submissions.length;
+    const mediaNotaFinal = totalRespondentes > 0
+      ? Math.round((submissions.reduce((s, x) => s + x.notaFinal, 0) / totalRespondentes) * 10) / 10
+      : 0;
 
-  const mediaPorPilar = PILARES_ORDEM.map(nome => {
-    const valores = submissions.map(s => {
-      const p = s.pilares.find(p => p.pilar === nome);
-      return p ? p.percentual : 0;
+    const mediaPorPilar = PILARES_ORDEM.map(nome => {
+      const valores = submissions.map(s => {
+        const p = s.pilares.find(p => p.pilar === nome);
+        return p ? p.percentual : 0;
+      });
+      const media = valores.length > 0 ? valores.reduce((a, b) => a + b, 0) / valores.length : 0;
+      return { pilar: nome, media: Math.round(media * 10) / 10 };
     });
-    const media = valores.length > 0 ? valores.reduce((a, b) => a + b, 0) / valores.length : 0;
-    return { pilar: nome, media: Math.round(media * 10) / 10 };
-  });
 
-  const porSegmento = {};
-  for (const s of submissions) {
-    const seg = s.lead.segmento;
-    if (!porSegmento[seg]) porSegmento[seg] = { count: 0, somaNota: 0 };
-    porSegmento[seg].count += 1;
-    porSegmento[seg].somaNota += s.notaFinal;
+    const porSegmento = {};
+    for (const s of submissions) {
+      const seg = s.lead.segmento;
+      if (!porSegmento[seg]) porSegmento[seg] = { count: 0, somaNota: 0 };
+      porSegmento[seg].count += 1;
+      porSegmento[seg].somaNota += s.notaFinal;
+    }
+    const resumoSegmento = Object.entries(porSegmento).map(([segmento, v]) => ({
+      segmento, total: v.count, mediaNota: Math.round((v.somaNota / v.count) * 10) / 10,
+    }));
+
+    const porClassificacao = {};
+    for (const s of submissions) {
+      porClassificacao[s.classificacao] = (porClassificacao[s.classificacao] || 0) + 1;
+    }
+
+    res.json({
+      totalRespondentes,
+      mediaNotaFinal,
+      mediaPorPilar,
+      resumoSegmento,
+      porClassificacao,
+      submissions,
+    });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Erro interno ao buscar estatísticas' });
   }
-  const resumoSegmento = Object.entries(porSegmento).map(([segmento, v]) => ({
-    segmento, total: v.count, mediaNota: Math.round((v.somaNota / v.count) * 10) / 10,
-  }));
-
-  const porClassificacao = {};
-  for (const s of submissions) {
-    porClassificacao[s.classificacao] = (porClassificacao[s.classificacao] || 0) + 1;
-  }
-
-  res.json({
-    totalRespondentes,
-    mediaNotaFinal,
-    mediaPorPilar,
-    resumoSegmento,
-    porClassificacao,
-    submissions,
-  });
 });
 
-app.get('/api/admin/export.csv', requireAdmin, (req, res) => {
-  const rows = db.prepare(`
-    SELECT l.empresa, l.razao_social, l.cnpj, l.respondente, l.email, l.telefone, l.cidade, l.estado, l.segmento,
-           s.nota_final, s.classificacao, s.created_at
-    FROM submissions s JOIN leads l ON l.id = s.lead_id
-    ORDER BY s.created_at DESC
-  `).all();
+app.get('/api/admin/export.csv', requireAdmin, async (req, res) => {
+  try {
+    const { rows } = await pool.query(`
+      SELECT l.empresa, l.razao_social, l.cnpj, l.respondente, l.email, l.telefone, l.cidade, l.estado, l.segmento,
+             s.nota_final, s.classificacao, s.created_at
+      FROM submissions s JOIN leads l ON l.id = s.lead_id
+      ORDER BY s.created_at DESC
+    `);
 
-  const header = ['Empresa', 'Razao Social', 'CNPJ', 'Respondente', 'Email', 'Telefone', 'Cidade', 'Estado', 'Segmento', 'Nota Final (%)', 'Classificacao', 'Data'];
-  const csvLines = [header.join(';')];
-  for (const r of rows) {
-    csvLines.push([
-      r.empresa, r.razao_social, r.cnpj, r.respondente, r.email, r.telefone, r.cidade, r.estado, r.segmento,
-      r.nota_final, r.classificacao, r.created_at,
-    ].map(v => `"${String(v).replace(/"/g, '""')}"`).join(';'));
+    const header = ['Empresa', 'Razao Social', 'CNPJ', 'Respondente', 'Email', 'Telefone', 'Cidade', 'Estado', 'Segmento', 'Nota Final (%)', 'Classificacao', 'Data'];
+    const csvLines = [header.join(';')];
+    for (const r of rows) {
+      csvLines.push([
+        r.empresa, r.razao_social, r.cnpj, r.respondente, r.email, r.telefone, r.cidade, r.estado, r.segmento,
+        r.nota_final, r.classificacao, r.created_at,
+      ].map(v => `"${String(v).replace(/"/g, '""')}"`).join(';'));
+    }
+
+    res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+    res.setHeader('Content-Disposition', 'attachment; filename="diagnostico_esg_leads.csv"');
+    res.send('﻿' + csvLines.join('\n'));
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Erro interno ao exportar CSV' });
   }
-
-  res.setHeader('Content-Type', 'text/csv; charset=utf-8');
-  res.setHeader('Content-Disposition', 'attachment; filename="diagnostico_esg_leads.csv"');
-  res.send('﻿' + csvLines.join('\n'));
 });
 
 // ---------- Static frontend ----------
 app.use(express.static(path.join(__dirname, 'public')));
 
-app.listen(PORT, () => {
-  console.log(`Diagnóstico ESG rodando em http://localhost:${PORT}`);
-});
+// ---------- Startup ----------
+initDb()
+  .then(() => {
+    app.listen(PORT, () => {
+      console.log(`Diagnóstico ESG rodando em http://localhost:${PORT}`);
+    });
+  })
+  .catch(err => {
+    console.error('Falha ao iniciar banco de dados:', err);
+    process.exit(1);
+  });
