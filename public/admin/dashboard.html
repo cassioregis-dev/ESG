@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Painel do Administrador — Diagnóstico ESG</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@600;700;800&family=Nunito+Sans:wght@400;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../css/style.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.4/chart.umd.min.js"></script>
+</head>
+<body>
+
+<header class="topbar">
+  <div class="container">
+    <a href="../index.html" class="brand">
+      <svg width="26" height="26" viewBox="0 0 24 24" fill="none"><path d="M12 2C7 6 4 10 4 14a8 8 0 0016 0c0-4-3-8-8-12z" fill="#66bb6a"/><path d="M12 22V10" stroke="#1b5e20" stroke-width="1.5"/></svg>
+      Diagnóstico ESG
+    </a>
+    <nav><a href="#" id="btn-logout">Sair</a></nav>
+  </div>
+</header>
+
+<section class="section" style="padding-top:36px;">
+  <div class="container">
+    <div class="topbar-admin">
+      <h1 style="margin:0;">Painel do Administrador</h1>
+      <button class="btn btn-primary" id="btn-csv">Exportar CSV</button>
+    </div>
+
+    <div id="loading" class="spinner"></div>
+
+    <div id="conteudo" style="display:none;">
+      <div class="grid-3" style="margin-bottom:32px;">
+        <div class="card stat-card">
+          <div class="valor" id="total-respondentes">0</div>
+          <div class="rotulo">Empresas avaliadas</div>
+        </div>
+        <div class="card stat-card">
+          <div class="valor" id="media-nota">0%</div>
+          <div class="rotulo">Nota média geral</div>
+        </div>
+        <div class="card stat-card">
+          <div class="valor" id="classificacao-top">-</div>
+          <div class="rotulo">Classificação mais comum</div>
+        </div>
+      </div>
+
+      <div class="grid-2" style="margin-bottom:32px;">
+        <div class="card">
+          <h3>Média por pilar</h3>
+          <canvas id="pilar-chart" height="220"></canvas>
+        </div>
+        <div class="card">
+          <h3>Empresas por segmento</h3>
+          <canvas id="segmento-chart" height="220"></canvas>
+        </div>
+      </div>
+
+      <div class="card">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px; flex-wrap:wrap; gap:12px;">
+          <h3 style="margin:0;">Todas as respostas (leads)</h3>
+          <input type="text" id="busca" placeholder="Buscar por empresa, cidade, e-mail..." style="max-width:280px;">
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Empresa</th><th>CNPJ</th><th>Respondente</th><th>E-mail</th><th>Telefone</th>
+                <th>Cidade/UF</th><th>Segmento</th><th>Nota</th><th>Classificação</th><th>Data</th>
+              </tr>
+            </thead>
+            <tbody id="tabela-body"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<script>
+function escapeHtml(str) {
+  return String(str).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+let STATS = null;
+
+async function checkAuth() {
+  const resp = await fetch('/api/admin/check');
+  const data = await resp.json();
+  if (!data.isAdmin) window.location.href = 'login.html';
+}
+
+const CORES_CLASSIFICACAO = {
+  'Iniciante': '#c0392b', 'Emergente': '#d68910', 'Comprometida': '#d4ac0d',
+  'Sustentável': '#2e7d32', 'Referência': '#00796b', 'Excelência ESG': '#1b5e20',
+};
+
+async function loadStats() {
+  const resp = await fetch('/api/admin/stats');
+  if (resp.status === 401) { window.location.href = 'login.html'; return; }
+  STATS = await resp.json();
+
+  document.getElementById('loading').style.display = 'none';
+  document.getElementById('conteudo').style.display = 'block';
+
+  document.getElementById('total-respondentes').textContent = STATS.totalRespondentes;
+  document.getElementById('media-nota').textContent = STATS.mediaNotaFinal + '%';
+
+  const porClass = STATS.porClassificacao || {};
+  const topClass = Object.entries(porClass).sort((a,b) => b[1]-a[1])[0];
+  document.getElementById('classificacao-top').textContent = topClass ? topClass[0] : '-';
+
+  new Chart(document.getElementById('pilar-chart'), {
+    type: 'bar',
+    data: {
+      labels: STATS.mediaPorPilar.map(p => p.pilar),
+      datasets: [{ label: 'Média (%)', data: STATS.mediaPorPilar.map(p => p.media), backgroundColor: '#2e7d32' }],
+    },
+    options: { indexAxis: 'y', scales: { x: { min: 0, max: 100 } }, plugins: { legend: { display: false } } },
+  });
+
+  new Chart(document.getElementById('segmento-chart'), {
+    type: 'doughnut',
+    data: {
+      labels: STATS.resumoSegmento.map(s => `${s.segmento} (${s.total})`),
+      datasets: [{ data: STATS.resumoSegmento.map(s => s.total), backgroundColor: ['#2e7d32', '#00796b', '#c17a3f', '#66bb6a'] }],
+    },
+  });
+
+  renderTabela(STATS.submissions);
+}
+
+function renderTabela(submissions) {
+  const
