@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Diagnóstico ESG — Autoavaliação de Sustentabilidade</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@600;700;800&family=Nunito+Sans:wght@400;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+<header class="topbar">
+  <div class="container">
+    <a href="index.html" class="brand">
+      <svg width="26" height="26" viewBox="0 0 24 24" fill="none"><path d="M12 2C7 6 4 10 4 14a8 8 0 0016 0c0-4-3-8-8-12z" fill="#66bb6a"/><path d="M12 22V10" stroke="#1b5e20" stroke-width="1.5"/></svg>
+      Diagnóstico ESG
+    </a>
+    <nav><a href="admin/login.html">Área do Administrador</a></nav>
+  </div>
+</header>
+
+<section class="hero">
+  <div class="container">
+    <h1>Descubra o quanto sua empresa já é sustentável.</h1>
+    <p class="lead">Um autodiagnóstico rápido e gratuito de práticas ESG (Ambiental, Social e Governança), pensado para empresas de comércio, serviços e turismo. Responda em cerca de 10 minutos e receba sua nota geral e o desempenho por pilar.</p>
+    <div class="badges">
+      <span class="badge-item">10 pilares avaliados</span>
+      <span class="badge-item">33 perguntas objetivas</span>
+      <span class="badge-item">Resultado imediato</span>
+    </div>
+    <div style="margin-top:36px; display:flex; gap:16px; flex-wrap:wrap;">
+      <a href="lead.html" class="btn btn-primary">Iniciar meu diagnóstico gratuito →</a>
+      <a href="#pilares" class="btn btn-outline">Ver os pilares avaliados</a>
+    </div>
+  </div>
+</section>
+
+<section class="section" id="segmentos">
+  <div class="container">
+    <h2>Feito para o seu setor</h2>
+    <p style="color:var(--texto-suave); max-width:600px;">O questionário foi calibrado para negócios de:</p>
+    <div class="segmentos">
+      <span class="segmento-chip">🏬 Comércio</span>
+      <span class="segmento-chip">🤝 Serviços</span>
+      <span class="segmento-chip">🧭 Turismo</span>
+    </div>
+  </div>
+</section>
+
+<section class="section" id="pilares" style="background:var(--verde-suave);">
+  <div class="container">
+    <h2>Os 10 pilares do diagnóstico</h2>
+    <p style="color:var(--texto-suave); max-width:640px; margin-bottom:32px;">Cada resposta é ponderada por relevância, gerando uma nota geral e uma nota individual por pilar.</p>
+    <div class="grid-3" id="pilares-grid"></div>
+  </div>
+</section>
+
+<section class="section">
+  <div class="container" style="text-align:center;">
+    <h2>Pronto para começar?</h2>
+    <p style="color:var(--texto-suave); max-width:520px; margin:0 auto 28px;">Leva menos de 10 minutos. Ao final você recebe sua nota geral e o percentual de cada pilar.</p>
+    <a href="lead.html" class="btn btn-primary">Iniciar meu diagnóstico gratuito →</a>
+  </div>
+</section>
+
+<footer class="site-footer">Diagnóstico ESG · Autoavaliação de Sustentabilidade para Comércio, Serviços e Turismo</footer>
+
+<script>
+const PILARES_INFO = [
+  ['Governança', 'Políticas, metas e transparência ESG.', '⚖️'],
+  ['Comunidade', 'Impacto social e geração de valor local.', '🤝'],
+  ['Pessoas', 'Saúde, segurança e clima organizacional.', '👥'],
+  ['Energia', 'Consumo, eficiência e carbono.', '⚡'],
+  ['Água', 'Consumo, reuso e efluentes.', '💧'],
+  ['Resíduos', 'Geração, segregação e reciclagem.', '♻️'],
+  ['Compras', 'Fornecedores locais e critérios ESG.', '🛒'],
+  ['Natureza', 'Biodiversidade e impactos ambientais.', '🌱'],
+  ['Cultura', 'Valorização da cultura local.', '🎭'],
+  ['Poluição', 'Ruído e produtos químicos nocivos.', '🏭'],
+];
+const grid = document.getElementById('pilares-grid');
+PILARES_INFO.forEach(([nome, desc, icone]) => {
+  grid.innerHTML += `<div class="pilar-card"><div class="icone" style="font-size:20px;">${icone}</div><div><h4>${nome}</h4><p>${desc}</p></div></div>`;
+});
+</script>
+
+</body>
+</html>
