@@ -7,7 +7,6 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@600;700;800&family=Nunito+Sans:wght@400;600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="css/style.css">
-<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.4/chart.umd.min.js"></script>
 </head>
 <body>
 
@@ -45,8 +44,10 @@
         <div id="pilar-bars"></div>
       </div>
 
-      <div class="card" style="margin-top:24px;">
-        <canvas id="radar-chart" height="280"></canvas>
+      <div class="card" style="margin-top:24px; text-align:center; background:linear-gradient(135deg, var(--verde-suave), var(--branco)); border-color:var(--verde-claro);">
+        <h3>Quer ajuda para melhorar os resultados de sustentabilidade da sua empresa?</h3>
+        <p style="color:var(--texto-suave); max-width:520px; margin:0 auto 20px;">Fale com a gente pelo WhatsApp — vamos te ajudar a evoluir em cada um dos pilares avaliados.</p>
+        <a href="#" id="btn-whatsapp" target="_blank" class="btn btn-primary">Falar no WhatsApp →</a>
       </div>
 
       <div style="text-align:center; margin-top:36px;">
@@ -94,23 +95,8 @@ async function load() {
       </div>`;
   });
 
-  new Chart(document.getElementById('radar-chart'), {
-    type: 'radar',
-    data: {
-      labels: data.pilares.map(p => p.pilar),
-      datasets: [{
-        label: 'Desempenho (%)',
-        data: data.pilares.map(p => p.percentual),
-        backgroundColor: 'rgba(46,125,50,0.2)',
-        borderColor: '#2e7d32',
-        pointBackgroundColor: '#1b5e20',
-      }],
-    },
-    options: {
-      scales: { r: { min: 0, max: 100, ticks: { stepSize: 20 } } },
-      plugins: { legend: { display: false } },
-    },
-  });
+  const mensagem = encodeURIComponent(`Olá! Fiz o Diagnóstico ESG da minha empresa (${data.lead ? data.lead.empresa : ''}), tive nota ${data.notaFinal}% (${data.classificacao}), e gostaria de ajuda para melhorar meus resultados de sustentabilidade.`);
+  document.getElementById('btn-whatsapp').href = `https://wa.me/5567999129003?text=${mensagem}`;
 }
 
 load();
