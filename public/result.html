@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Resultado — Diagnóstico ESG</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@600;700;800&family=Nunito+Sans:wght@400;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/style.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.4/chart.umd.min.js"></script>
+</head>
+<body>
+
+<header class="topbar">
+  <div class="container">
+    <a href="index.html" class="brand">
+      <svg width="26" height="26" viewBox="0 0 24 24" fill="none"><path d="M12 2C7 6 4 10 4 14a8 8 0 0016 0c0-4-3-8-8-12z" fill="#66bb6a"/><path d="M12 22V10" stroke="#1b5e20" stroke-width="1.5"/></svg>
+      Diagnóstico ESG
+    </a>
+    <nav><a href="index.html">Nova avaliação</a></nav>
+  </div>
+</header>
+
+<div id="loading" class="spinner" style="margin-top:60px;"></div>
+
+<div id="conteudo" style="display:none;">
+  <section class="resultado-hero" style="background:var(--verde-suave);">
+    <div class="container">
+      <p style="color:var(--texto-suave); font-weight:700; letter-spacing:.05em; text-transform:uppercase; font-size:.8rem;" id="empresa-nome"></p>
+      <h1 style="margin-bottom:4px;">Seu resultado no Diagnóstico ESG</h1>
+      <div class="nota-circulo" id="nota-circulo">
+        <div class="nota-circulo-inner">
+          <span class="num" id="nota-num">0%</span>
+          <span class="lbl">nota geral</span>
+        </div>
+      </div>
+      <div class="classificacao-badge" id="classificacao-badge"></div>
+    </div>
+  </section>
+
+  <section class="section">
+    <div class="container" style="max-width:760px;">
+      <h2>Desempenho por pilar</h2>
+      <div class="card">
+        <div id="pilar-bars"></div>
+      </div>
+
+      <div class="card" style="margin-top:24px;">
+        <canvas id="radar-chart" height="280"></canvas>
+      </div>
+
+      <div style="text-align:center; margin-top:36px;">
+        <p style="color:var(--texto-suave);">Obrigado por participar! Sua resposta ajuda a construir um panorama de sustentabilidade do setor.</p>
+        <a href="index.html" class="btn btn-secondary" style="border:2px solid var(--verde); color:var(--verde-escuro);">Voltar à página inicial</a>
+      </div>
+    </div>
+  </section>
+</div>
+
+<footer class="site-footer">Diagnóstico ESG · Autoavaliação de Sustentabilidade para Comércio, Serviços e Turismo</footer>
+
+<script>
+const params = new URLSearchParams(window.location.search);
+const submissionId = params.get('id');
+
+async function load() {
+  if (!submissionId) { window.location.href = 'index.html'; return; }
+  const resp = await fetch(`/api/result/${submissionId}`);
+  if (!resp.ok) { document.getElementById('loading').textContent = 'Resultado não encontrado.'; return; }
+  const data = await resp.json();
+
+  document.getElementById('loading').style.display = 'none';
+  document.getElementById('conteudo').style.display = 'block';
+
+  document.getElementById('empresa-nome').textContent = data.lead ? `${data.lead.empresa} · ${data.lead.segmento} · ${data.lead.cidade}/${data.lead.estado}` : '';
+  document.getElementById('nota-num').textContent = data.notaFinal + '%';
+  document.getElementById('nota-circulo').style.setProperty('--pct',
