@@ -131,4 +131,47 @@ async function loadStats() {
 }
 
 function renderTabela(submissions) {
-  const
+  const body = document.getElementById('tabela-body');
+  body.innerHTML = submissions.map(s => `
+    <tr>
+      <td>${escapeHtml(s.lead.empresa)}</td>
+      <td>${escapeHtml(s.lead.cnpj)}</td>
+      <td>${escapeHtml(s.lead.respondente)}</td>
+      <td>${escapeHtml(s.lead.email)}</td>
+      <td>${escapeHtml(s.lead.telefone)}</td>
+      <td>${escapeHtml(s.lead.cidade)}/${escapeHtml(s.lead.estado)}</td>
+      <td>${escapeHtml(s.lead.segmento)}</td>
+      <td><strong>${s.notaFinal}%</strong></td>
+      <td><span class="tag" style="background:${(CORES_CLASSIFICACAO[s.classificacao]||'#2e7d32')}22; color:${CORES_CLASSIFICACAO[s.classificacao]||'#2e7d32'};">${escapeHtml(s.classificacao)}</span></td>
+      <td>${new Date(s.submittedAt.replace(' ', 'T') + 'Z').toLocaleDateString('pt-BR')}</td>
+    </tr>
+  `).join('') || '<tr><td colspan="10" style="text-align:center; color:var(--texto-suave);">Nenhuma resposta ainda.</td></tr>';
+}
+
+document.getElementById('busca').addEventListener('input', (e) => {
+  const termo = e.target.value.toLowerCase();
+  if (!STATS) return;
+  const filtradas = STATS.submissions.filter(s =>
+    s.lead.empresa.toLowerCase().includes(termo) ||
+    s.lead.cidade.toLowerCase().includes(termo) ||
+    s.lead.email.toLowerCase().includes(termo) ||
+    s.lead.segmento.toLowerCase().includes(termo)
+  );
+  renderTabela(filtradas);
+});
+
+document.getElementById('btn-csv').addEventListener('click', () => {
+  window.location.href = '/api/admin/export.csv';
+});
+
+document.getElementById('btn-logout').addEventListener('click', async (e) => {
+  e.preventDefault();
+  await fetch('/api/admin/logout', { method: 'POST' });
+  window.location.href = 'login.html';
+});
+
+checkAuth().then(loadStats);
+</script>
+
+</body>
+</html>
