@@ -74,4 +74,47 @@ async function load() {
 
   document.getElementById('empresa-nome').textContent = data.lead ? `${data.lead.empresa} · ${data.lead.segmento} · ${data.lead.cidade}/${data.lead.estado}` : '';
   document.getElementById('nota-num').textContent = data.notaFinal + '%';
-  document.getElementById('nota-circulo').style.setProperty('--pct',
+  document.getElementById('nota-circulo').style.setProperty('--pct', data.notaFinal);
+  document.getElementById('classificacao-badge').textContent = data.classificacao;
+
+  const cores = {
+    'Iniciante': '#c0392b', 'Emergente': '#d68910', 'Comprometida': '#d4ac0d',
+    'Sustentável': '#2e7d32', 'Referência': '#00796b', 'Excelência ESG': '#1b5e20',
+  };
+  document.getElementById('classificacao-badge').style.background = (cores[data.classificacao] || '#2e7d32') + '22';
+  document.getElementById('classificacao-badge').style.color = cores[data.classificacao] || '#2e7d32';
+
+  const barsWrap = document.getElementById('pilar-bars');
+  data.pilares.forEach(p => {
+    barsWrap.innerHTML += `
+      <div class="pilar-bar-row">
+        <span class="nome">${p.pilar}</span>
+        <div class="pilar-bar-track"><div class="pilar-bar-fill" style="width:${p.percentual}%;"></div></div>
+        <span class="pct">${p.percentual}%</span>
+      </div>`;
+  });
+
+  new Chart(document.getElementById('radar-chart'), {
+    type: 'radar',
+    data: {
+      labels: data.pilares.map(p => p.pilar),
+      datasets: [{
+        label: 'Desempenho (%)',
+        data: data.pilares.map(p => p.percentual),
+        backgroundColor: 'rgba(46,125,50,0.2)',
+        borderColor: '#2e7d32',
+        pointBackgroundColor: '#1b5e20',
+      }],
+    },
+    options: {
+      scales: { r: { min: 0, max: 100, ticks: { stepSize: 20 } } },
+      plugins: { legend: { display: false } },
+    },
+  });
+}
+
+load();
+</script>
+
+</body>
+</html>
