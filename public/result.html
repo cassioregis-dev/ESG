@@ -7,6 +7,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@600;700;800&family=Nunito+Sans:wght@400;600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="css/style.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 </head>
 <body>
 
@@ -23,30 +24,42 @@
 <div id="loading" class="spinner" style="margin-top:60px;"></div>
 
 <div id="conteudo" style="display:none;">
-  <section class="resultado-hero" style="background:var(--verde-suave);">
-    <div class="container">
-      <p style="color:var(--texto-suave); font-weight:700; letter-spacing:.05em; text-transform:uppercase; font-size:.8rem;" id="empresa-nome"></p>
-      <h1 style="margin-bottom:4px;">Seu resultado no Diagnóstico ESG</h1>
-      <div class="nota-circulo" id="nota-circulo">
-        <div class="nota-circulo-inner">
-          <span class="num" id="nota-num">0%</span>
-          <span class="lbl">nota geral</span>
+
+  <div id="captura-imagem" style="background:var(--branco); padding-bottom:8px;">
+    <section class="resultado-hero" style="background:var(--verde-suave);">
+      <div class="container">
+        <p style="color:var(--texto-suave); font-weight:700; letter-spacing:.05em; text-transform:uppercase; font-size:.8rem;" id="empresa-nome"></p>
+        <h1 style="margin-bottom:4px;">Seu resultado no Diagnóstico ESG</h1>
+        <div class="nota-circulo" id="nota-circulo">
+          <div class="nota-circulo-inner">
+            <span class="num" id="nota-num">0%</span>
+            <span class="lbl">nota geral</span>
+          </div>
         </div>
+        <div class="classificacao-badge" id="classificacao-badge"></div>
       </div>
-      <div class="classificacao-badge" id="classificacao-badge"></div>
-    </div>
-  </section>
+    </section>
 
-  <section class="section">
+    <section class="section" style="padding-top:32px; padding-bottom:8px;">
+      <div class="container" style="max-width:760px;">
+        <h2>Desempenho por tema</h2>
+        <div class="card">
+          <div id="pilar-bars"></div>
+        </div>
+        <p style="text-align:center; color:var(--texto-suave); font-size:.78rem; margin-top:16px;">Diagnóstico ESG · <span id="empresa-rodape"></span> · <span id="data-rodape"></span></p>
+      </div>
+    </section>
+  </div>
+
+  <section class="section" style="padding-top:0;">
     <div class="container" style="max-width:760px;">
-      <h2>Desempenho por tema</h2>
-      <div class="card">
-        <div id="pilar-bars"></div>
+      <div style="text-align:center; margin-bottom:28px;">
+        <button type="button" class="btn btn-secondary" id="btn-baixar-imagem" style="border:2px solid var(--verde); color:var(--verde-escuro);">Baixar imagem do resultado 📷</button>
       </div>
 
-      <div class="card" style="margin-top:24px; text-align:center; background:linear-gradient(135deg, var(--verde-suave), var(--branco)); border-color:var(--verde-claro);">
+      <div class="card" style="text-align:center; background:linear-gradient(135deg, var(--verde-suave), var(--branco)); border-color:var(--verde-claro);">
         <h3>Quer ajuda para melhorar os resultados de sustentabilidade da sua empresa?</h3>
-        <p style="color:var(--texto-suave); max-width:520px; margin:0 auto 20px;">Fale com a gente pelo WhatsApp — vamos te ajudar a evoluir em cada um dos pilares avaliados.</p>
+        <p style="color:var(--texto-suave); max-width:520px; margin:0 auto 20px;">Fale com a gente pelo WhatsApp — vamos te ajudar a evoluir em cada um dos temas avaliados.</p>
         <a href="#" id="btn-whatsapp" target="_blank" class="btn btn-primary">Falar no WhatsApp →</a>
       </div>
 
@@ -73,7 +86,10 @@ async function load() {
   document.getElementById('loading').style.display = 'none';
   document.getElementById('conteudo').style.display = 'block';
 
+  const nomeEmpresa = data.lead ? data.lead.empresa : '';
   document.getElementById('empresa-nome').textContent = data.lead ? `${data.lead.empresa} · ${data.lead.segmento} · ${data.lead.cidade}/${data.lead.estado}` : '';
+  document.getElementById('empresa-rodape').textContent = nomeEmpresa;
+  document.getElementById('data-rodape').textContent = new Date(data.createdAt).toLocaleDateString('pt-BR');
   document.getElementById('nota-num').textContent = data.notaFinal + '%';
   document.getElementById('nota-circulo').style.setProperty('--pct', data.notaFinal);
   document.getElementById('classificacao-badge').textContent = data.classificacao;
@@ -95,8 +111,33 @@ async function load() {
       </div>`;
   });
 
-  const mensagem = encodeURIComponent(`Olá! Fiz o Diagnóstico ESG da minha empresa (${data.lead ? data.lead.empresa : ''}), tive nota ${data.notaFinal}% (${data.classificacao}), e gostaria de ajuda para melhorar meus resultados de sustentabilidade.`);
+  const mensagem = encodeURIComponent(`Olá! Fiz o Diagnóstico ESG da minha empresa (${nomeEmpresa}), tive nota ${data.notaFinal}% (${data.classificacao}), e gostaria de ajuda para melhorar meus resultados de sustentabilidade.`);
   document.getElementById('btn-whatsapp').href = `https://wa.me/5567999129003?text=${mensagem}`;
+
+  document.getElementById('btn-baixar-imagem').addEventListener('click', async () => {
+    const btn = document.getElementById('btn-baixar-imagem');
+    const textoOriginal = btn.textContent;
+    btn.disabled = true;
+    btn.textContent = 'Gerando imagem...';
+    try {
+      const canvas = await html2canvas(document.getElementById('captura-imagem'), {
+        backgroundColor: '#ffffff',
+        scale: 2,
+        useCORS: true,
+      });
+      const link = document.createElement('a');
+      const nomeArquivo = (nomeEmpresa || 'resultado').replace(/[^a-zA-Z0-9]+/g, '_');
+      link.download = `diagnostico-esg-${nomeArquivo}.png`;
+      link.href = canvas.toDataURL('image/png');
+      link.click();
+    } catch (err) {
+      alert('Não foi possível gerar a imagem. Tente novamente.');
+      console.error(err);
+    } finally {
+      btn.disabled = false;
+      btn.textContent = textoOriginal;
+    }
+  });
 }
 
 load();
