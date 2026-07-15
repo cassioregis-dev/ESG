@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Autoavaliação — Diagnóstico ESG</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@600;700;800&family=Nunito+Sans:wght@400;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+<header class="topbar">
+  <div class="container">
+    <a href="index.html" class="brand">
+      <svg width="26" height="26" viewBox="0 0 24 24" fill="none"><path d="M12 2C7 6 4 10 4 14a8 8 0 0016 0c0-4-3-8-8-12z" fill="#66bb6a"/><path d="M12 22V10" stroke="#1b5e20" stroke-width="1.5"/></svg>
+      Diagnóstico ESG
+    </a>
+    <nav id="empresa-nav"></nav>
+  </div>
+</header>
+
+<section class="section" style="padding-top:36px;">
+  <div class="container" style="max-width:760px;">
+    <h1>Autoavaliação de Sustentabilidade</h1>
+    <p style="color:var(--texto-suave);">Para cada pergunta, escolha a opção que melhor descreve a situação atual da empresa.</p>
+
+    <div class="progress-wrap"><div class="progress-bar" id="progress-bar"></div></div>
+    <p id="progress-text" style="font-size:.85rem; color:var(--texto-suave); margin-top:-20px;">0 de 0 respondidas</p>
+
+    <div id="loading" class="spinner"></div>
+    <form id="assessment-form" style="display:none;"></form>
+
+    <p class="erro-msg" id="erro-msg"></p>
+  </div>
+</section>
+
+<div class="sticky-footer">
+  <div class="container">
+    <span id="footer-status" style="font-size:.85rem; color:var(--texto-suave);"></span>
+    <button type="button" class="btn btn-primary" id="btn-enviar" disabled>Ver meu resultado →</button>
+  </div>
+</div>
+
+<script>
+const leadId = sessionStorage.getItem('leadId');
+if (!leadId) window.location.href = 'lead.html';
+document.getElementById('empresa-nav').textContent = sessionStorage.getItem('leadEmpresa') || '';
+
+const ESCALA_ICONS = { 0:'✕', 1:'○', 2:'◔', 3:'◑', 4:'◕', 5:'●' };
+let QUESTIONS = [], ESCALA = [], PILARES = [];
+const respostas = {};
+
+async function init() {
+  const resp = await fetch('/api/questions');
+  const data = await resp.json();
+  QUESTIONS = data.questions;
+  ESCALA = data.escala;
+  PILARES = data.pilares;
+
+  const form = document.getElementById('assessment-form');
+  PILARES.forEach((pilar, idx) => {
+    const perguntas = QUESTIONS.filter(q => q.pilar === pilar);
+    let html = `<div class="pilar-header"><span class="num">${idx+1}</span><h3 style="margin:0;">${pilar}</h3></div>`;
+    perguntas.forEach(q => {
+      html += `<div class="pergunta-item" data-qid="${q.id}">
+        <p class="texto">${q.pergunta}</p>
+        <div class="escala-options">
+          ${ESCALA.map(e => `
+            <label class="escala-opt" data-qid="${q.id}" data-val="${e.valor}">
+              <input type="radio" name="${q.id}" value="${e.valor}">
+              <span class="valor">${ESCALA_ICONS[e.valor]}</span>
+              ${e.label}
+            </label>`).join('')}
+        </div>
+      </div>`;
+    });
+    form.innerHTML += html;
+  });
+
+  document.getElementById('loading').style.display = 'none';
+  form.style.display = 'block';
+
+  document.querySelectorAll('.escala-opt').forEach(opt => {
+    opt.addEventListener('click', () => {
+      const qid = opt.dataset.qid;
+      document.querySelectorAll(`.escala-opt[data-qid="${qid}"]`).forEach(o => o.classList.remove('selected'));
+      opt.classList.add('selected');
+      opt.querySelector('input').checked = true;
+      respostas[qid] = Number(opt.dataset.val);
+      updateProgress();
+    });
+  });
+
+  updateProgress();
+}
+
+function updateProgress() {
+  const total = QUESTIONS.length;
+  const respondidas = Object.keys(respostas).length;
+  const pct = total > 0 ? (respondidas / total) * 100 : 0;
+  document.getElementById('progress-bar').style.width = pct + '%';
+  document.getElementById('progress-text').textContent = `${respondidas} de ${total} respondidas`;
+  document.getElementById('footer-status').textContent = respondidas === total ? 'Todas as perguntas respondidas!' : `Faltam ${total - respondidas} perguntas`;
+  document.getElementById('btn-enviar').disabled = respondidas !== total;
+}
+
+document.getElementById('btn-enviar').addEventListener('click', async () => {
+  const btn = document.getElementById('btn-enviar');
+  const erroMsg = document.getElementById('erro-msg');
+  erroMsg.style.display = 'none';
+  btn.disabled = true;
+  btn.textContent = 'Calculando resultado...';
+
+  try {
+    const resp = await fetch('/api/submit', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ leadId: Number(leadId), respostas }),
+    });
+    const data = await resp.json();
+    if (!resp.ok) throw new Error(data.error || 'Erro ao enviar respostas');
+
+    window.location.href = `result.html?id=${data.submissionId}`;
+  } catch (err) {
+    erroMsg.textContent = err.message;
+    erroMsg.style.display = 'block';
+    btn.disabled = false;
+    btn.textContent = 'Ver meu resultado →';
+  }
+});
+
+init();
+</script>
+
+</body>
+</html>
