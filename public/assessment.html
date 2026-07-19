@@ -9,7 +9,6 @@
 <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
-
 <header class="topbar">
   <div class="container">
     <a href="index.html" class="brand">
@@ -19,38 +18,33 @@
     <nav id="empresa-nav"></nav>
   </div>
 </header>
-
 <section class="section" style="padding-top:36px;">
   <div class="container" style="max-width:760px;">
     <h1>Autoavaliação de Sustentabilidade</h1>
     <p style="color:var(--texto-suave);">Para cada pergunta, escolha a opção que melhor descreve a situação atual.</p>
-
     <div class="progress-wrap"><div class="progress-bar" id="progress-bar"></div></div>
     <p id="progress-text" style="font-size:.85rem; color:var(--texto-suave); margin-top:-20px;">0 de 0 respondidas</p>
-
+    <div class="tema-nav" id="tema-nav"></div>
     <div id="loading" class="spinner"></div>
     <form id="assessment-form" style="display:none;"></form>
-
     <p class="erro-msg" id="erro-msg"></p>
   </div>
 </section>
-
 <div class="sticky-footer">
   <div class="container">
     <span id="footer-status" style="font-size:.85rem; color:var(--texto-suave);"></span>
     <button type="button" class="btn btn-primary" id="btn-enviar" disabled>Ver meu resultado →</button>
   </div>
 </div>
-
 <script>
 const leadId = sessionStorage.getItem('leadId');
 const tipo = sessionStorage.getItem('tipo') === 'cidade' ? 'cidade' : 'empresa';
 if (!leadId) window.location.href = 'lead.html';
 document.getElementById('empresa-nav').textContent = sessionStorage.getItem('leadNome') || '';
-
 const ESCALA_ICONS = { 0:'✕', 1:'○', 2:'◔', 3:'◑', 4:'◕', 5:'●' };
 let QUESTIONS = [], ESCALA = [], PILARES = [];
 const respostas = {};
+let currentTema = 0;
 
 async function init() {
   const resp = await fetch(`/api/questions?tipo=${tipo}`);
@@ -59,10 +53,18 @@ async function init() {
   ESCALA = data.escala;
   PILARES = data.pilares;
 
+  document.getElementById('tema-nav').innerHTML = PILARES.map((pilar, idx) => `
+    <button type="button" class="tema-pill${idx === 0 ? ' active' : ''}" data-idx="${idx}">${pilar}</button>
+  `).join('');
+  document.querySelectorAll('.tema-pill').forEach(p => {
+    p.addEventListener('click', () => goToTema(Number(p.dataset.idx)));
+  });
+
   const form = document.getElementById('assessment-form');
   PILARES.forEach((pilar, idx) => {
     const perguntas = QUESTIONS.filter(q => q.pilar === pilar);
-    let html = `<div class="pilar-header"><span class="num">${idx+1}</span><h3 style="margin:0;">${pilar}</h3></div>`;
+    let html = `<div class="tema-section" id="tema-${idx}" style="display:${idx === 0 ? 'block' : 'none'};">`;
+    html += `<div class="pilar-header"><span class="num">${idx+1}</span><h3 style="margin:0;">${pilar}</h3></div>`;
     perguntas.forEach(q => {
       html += `<div class="pergunta-item" data-qid="${q.id}">
         <p class="texto">${q.pergunta}</p>
@@ -76,6 +78,11 @@ async function init() {
         </div>
       </div>`;
     });
+    html += `<div style="display:flex; justify-content:space-between; margin-top:24px;">
+      <button type="button" class="btn btn-ghost btn-tema-anterior" data-idx="${idx}" style="${idx === 0 ? 'visibility:hidden;' : ''}">← Tema anterior</button>
+      <button type="button" class="btn btn-primary btn-proximo-tema" data-idx="${idx}" style="${idx === PILARES.length - 1 ? 'visibility:hidden;' : ''}">Próximo tema →</button>
+    </div>`;
+    html += `</div>`;
     form.innerHTML += html;
   });
 
@@ -92,8 +99,23 @@ async function init() {
       updateProgress();
     });
   });
+  document.querySelectorAll('.btn-tema-anterior').forEach(b => {
+    b.addEventListener('click', () => goToTema(Number(b.dataset.idx) - 1));
+  });
+  document.querySelectorAll('.btn-proximo-tema').forEach(b => {
+    b.addEventListener('click', () => goToTema(Number(b.dataset.idx) + 1));
+  });
 
   updateProgress();
+}
+
+function goToTema(idx) {
+  if (idx < 0 || idx >= PILARES.length) return;
+  document.getElementById(`tema-${currentTema}`).style.display = 'none';
+  currentTema = idx;
+  document.getElementById(`tema-${currentTema}`).style.display = 'block';
+  document.querySelectorAll('.tema-pill').forEach(p => p.classList.toggle('active', Number(p.dataset.idx) === currentTema));
+  window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 
 function updateProgress() {
@@ -104,6 +126,13 @@ function updateProgress() {
   document.getElementById('progress-text').textContent = `${respondidas} de ${total} respondidas`;
   document.getElementById('footer-status').textContent = respondidas === total ? 'Todas as perguntas respondidas!' : `Faltam ${total - respondidas} perguntas`;
   document.getElementById('btn-enviar').disabled = respondidas !== total;
+
+  PILARES.forEach((pilar, idx) => {
+    const perguntas = QUESTIONS.filter(q => q.pilar === pilar);
+    const completo = perguntas.length > 0 && perguntas.every(q => q.id in respostas);
+    const pill = document.querySelector(`.tema-pill[data-idx="${idx}"]`);
+    if (pill) pill.classList.toggle('completo', completo);
+  });
 }
 
 document.getElementById('btn-enviar').addEventListener('click', async () => {
@@ -112,7 +141,6 @@ document.getElementById('btn-enviar').addEventListener('click', async () => {
   erroMsg.style.display = 'none';
   btn.disabled = true;
   btn.textContent = 'Calculando resultado...';
-
   try {
     const resp = await fetch('/api/submit', {
       method: 'POST',
@@ -121,7 +149,6 @@ document.getElementById('btn-enviar').addEventListener('click', async () => {
     });
     const data = await resp.json();
     if (!resp.ok) throw new Error(data.error || 'Erro ao enviar respostas');
-
     window.location.href = `result.html?id=${data.submissionId}`;
   } catch (err) {
     erroMsg.textContent = err.message;
@@ -130,9 +157,7 @@ document.getElementById('btn-enviar').addEventListener('click', async () => {
     btn.textContent = 'Ver meu resultado →';
   }
 });
-
 init();
 </script>
-
 </body>
 </html>
