@@ -22,36 +22,46 @@
 
 <section class="hero">
   <div class="container">
-    <h1>Descubra o quanto sua empresa já é sustentável.</h1>
-    <p class="lead">Um autodiagnóstico rápido e gratuito de práticas ESG (Ambiental, Social e Governança), pensado para empresas de comércio, serviços e turismo. Responda em cerca de 10 minutos e receba sua nota geral e o desempenho por tema.</p>
+    <h1>Descubra o quanto sua empresa (ou cidade) já é sustentável.</h1>
+    <p class="lead">Um autodiagnóstico rápido e gratuito de práticas ESG e sustentabilidade, pensado para empresas de comércio, serviços e turismo — e também para municípios que querem avaliar seu destino turístico. Responda e receba sua nota geral e o desempenho por tema.</p>
     <div class="badges">
-      <span class="badge-item">10 temas avaliados</span>
-      <span class="badge-item">33 perguntas objetivas</span>
       <span class="badge-item">Resultado imediato</span>
+      <span class="badge-item">Grátis</span>
+      <span class="badge-item">Leva poucos minutos</span>
     </div>
-    <div style="margin-top:36px; display:flex; gap:16px; flex-wrap:wrap;">
-      <a href="lead.html" class="btn btn-primary">Iniciar meu diagnóstico gratuito →</a>
-      <a href="#temas" class="btn btn-outline">Ver os temas avaliados</a>
+
+    <div class="tipo-options">
+      <a href="lead.html?tipo=empresa" class="tipo-card">
+        <div class="icone">🏢</div>
+        <h3>Sou uma Empresa</h3>
+        <p>Comércio, Serviços ou Turismo — 33 perguntas em 10 temas ESG.</p>
+      </a>
+      <a href="lead.html?tipo=cidade" class="tipo-card">
+        <div class="icone">🏙️</div>
+        <h3>Sou um Município</h3>
+        <p>Autodiagnóstico de destino turístico sustentável — 75 indicadores em 6 temas.</p>
+      </a>
     </div>
   </div>
 </section>
 
 <section class="section" id="segmentos">
   <div class="container">
-    <h2>Feito para o seu setor</h2>
-    <p style="color:var(--texto-suave); max-width:600px;">O questionário foi calibrado para negócios de:</p>
+    <h2>Feito para o seu contexto</h2>
+    <p style="color:var(--texto-suave); max-width:600px;">O questionário de Empresas foi calibrado para negócios de:</p>
     <div class="segmentos">
       <span class="segmento-chip">🏬 Comércio</span>
       <span class="segmento-chip">🤝 Serviços</span>
       <span class="segmento-chip">🧭 Turismo</span>
     </div>
+    <p style="color:var(--texto-suave); max-width:600px; margin-top:24px;">E o questionário de Cidades, para municípios e destinos turísticos que querem medir sua maturidade em sustentabilidade.</p>
   </div>
 </section>
 
 <section class="section" id="temas" style="background:var(--verde-suave);">
   <div class="container">
-    <h2>Os 10 temas do diagnóstico</h2>
-    <p style="color:var(--texto-suave); max-width:640px; margin-bottom:32px;">Cada resposta é ponderada por relevância, gerando uma nota geral e uma nota individual por tema.</p>
+    <h2>Os temas avaliados</h2>
+    <p style="color:var(--texto-suave); max-width:640px; margin-bottom:32px;">Cada resposta é ponderada por relevância, gerando uma nota geral e uma nota individual por tema — tanto para empresas quanto para municípios.</p>
     <div class="grid-3" id="pilares-grid"></div>
   </div>
 </section>
@@ -59,12 +69,11 @@
 <section class="section">
   <div class="container" style="text-align:center;">
     <h2>Pronto para começar?</h2>
-    <p style="color:var(--texto-suave); max-width:520px; margin:0 auto 28px;">Leva menos de 10 minutos. Ao final você recebe sua nota geral e o percentual de cada tema.</p>
-    <a href="lead.html" class="btn btn-primary">Iniciar meu diagnóstico gratuito →</a>
+    <p style="color:var(--texto-suave); max-width:520px; margin:0 auto 28px;">Escolha acima se você vai avaliar uma empresa ou um município.</p>
   </div>
 </section>
 
-<footer class="site-footer">Diagnóstico ESG · Autoavaliação de Sustentabilidade para Comércio, Serviços e Turismo</footer>
+<footer class="site-footer">Diagnóstico ESG · Autoavaliação de Sustentabilidade para Empresas e Municípios</footer>
 
 <script>
 const PILARES_INFO = [
@@ -74,10 +83,10 @@ const PILARES_INFO = [
   ['Energia', 'Consumo, eficiência e carbono.', '⚡'],
   ['Água', 'Consumo, reuso e efluentes.', '💧'],
   ['Resíduos', 'Geração, segregação e reciclagem.', '♻️'],
-  ['Compras', 'Fornecedores locais e critérios ESG.', '🛒'],
-  ['Natureza', 'Biodiversidade e impactos ambientais.', '🌱'],
-  ['Cultura', 'Valorização da cultura local.', '🎭'],
-  ['Poluição', 'Ruído e produtos químicos nocivos.', '🏭'],
+  ['Gestão do Destino', 'Governança e planejamento turístico municipal.', '🗺️'],
+  ['Natureza & Paisagem', 'Conservação ambiental e biodiversidade.', '🌱'],
+  ['Cultura & Tradição', 'Patrimônio material e imaterial.', '🎭'],
+  ['Bem-estar Social', 'Qualidade de vida e inclusão da comunidade.', '❤️'],
 ];
 const grid = document.getElementById('pilares-grid');
 PILARES_INFO.forEach(([nome, desc, icone]) => {
