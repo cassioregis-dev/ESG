@@ -23,7 +23,7 @@
 <section class="section" style="padding-top:36px;">
   <div class="container" style="max-width:760px;">
     <h1>Autoavaliação de Sustentabilidade</h1>
-    <p style="color:var(--texto-suave);">Para cada pergunta, escolha a opção que melhor descreve a situação atual da empresa.</p>
+    <p style="color:var(--texto-suave);">Para cada pergunta, escolha a opção que melhor descreve a situação atual.</p>
 
     <div class="progress-wrap"><div class="progress-bar" id="progress-bar"></div></div>
     <p id="progress-text" style="font-size:.85rem; color:var(--texto-suave); margin-top:-20px;">0 de 0 respondidas</p>
@@ -44,15 +44,16 @@
 
 <script>
 const leadId = sessionStorage.getItem('leadId');
+const tipo = sessionStorage.getItem('tipo') === 'cidade' ? 'cidade' : 'empresa';
 if (!leadId) window.location.href = 'lead.html';
-document.getElementById('empresa-nav').textContent = sessionStorage.getItem('leadEmpresa') || '';
+document.getElementById('empresa-nav').textContent = sessionStorage.getItem('leadNome') || '';
 
 const ESCALA_ICONS = { 0:'✕', 1:'○', 2:'◔', 3:'◑', 4:'◕', 5:'●' };
 let QUESTIONS = [], ESCALA = [], PILARES = [];
 const respostas = {};
 
 async function init() {
-  const resp = await fetch('/api/questions');
+  const resp = await fetch(`/api/questions?tipo=${tipo}`);
   const data = await resp.json();
   QUESTIONS = data.questions;
   ESCALA = data.escala;
