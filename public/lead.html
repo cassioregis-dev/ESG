@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Dados da Empresa — Diagnóstico ESG</title>
+<title>Dados de Cadastro — Diagnóstico ESG</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@600;700;800&family=Nunito+Sans:wght@400;600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="css/style.css">
@@ -22,75 +22,109 @@
 
 <section class="section">
   <div class="container" style="max-width:720px;">
-    <h1>Antes de começar, conte um pouco sobre sua empresa</h1>
-    <p style="color:var(--texto-suave);">Esses dados são usados apenas para identificar seu resultado e para contato futuro. Leva menos de 1 minuto.</p>
+    <h1 id="titulo-form">Antes de começar, conte um pouco sobre sua empresa</h1>
+    <p style="color:var(--texto-suave);" id="subtitulo-form">Esses dados são usados apenas para identificar seu resultado e para contato futuro. Leva menos de 1 minuto.</p>
 
     <div class="card" style="margin-top:24px;">
       <form id="lead-form" novalidate>
-        <div class="form-row">
-          <div class="form-field">
-            <label for="empresa">Nome da Empresa *</label>
-            <input type="text" id="empresa" name="empresa" required>
+
+        <div id="campos-empresa">
+          <div class="form-row">
+            <div class="form-field">
+              <label for="empresa">Nome da Empresa *</label>
+              <input type="text" id="empresa" name="empresa">
+            </div>
+            <div class="form-field">
+              <label for="razao_social_empresa">Razão Social *</label>
+              <input type="text" id="razao_social_empresa" name="razao_social_empresa">
+            </div>
+          </div>
+          <div class="form-row">
+            <div class="form-field">
+              <label for="cnpj_empresa">CNPJ *</label>
+              <input type="text" id="cnpj_empresa" name="cnpj_empresa" placeholder="00.000.000/0000-00">
+            </div>
+            <div class="form-field">
+              <label for="respondente_empresa">Nome do Respondente *</label>
+              <input type="text" id="respondente_empresa" name="respondente_empresa">
+            </div>
+          </div>
+          <div class="form-row">
+            <div class="form-field">
+              <label for="email_empresa">E-mail *</label>
+              <input type="email" id="email_empresa" name="email_empresa">
+            </div>
+            <div class="form-field">
+              <label for="telefone_empresa">Telefone *</label>
+              <input type="tel" id="telefone_empresa" name="telefone_empresa" placeholder="(00) 00000-0000">
+            </div>
+          </div>
+          <div class="form-row">
+            <div class="form-field">
+              <label for="cidade_empresa">Cidade *</label>
+              <input type="text" id="cidade_empresa" name="cidade_empresa">
+            </div>
+            <div class="form-field">
+              <label for="estado_empresa">Estado *</label>
+              <select id="estado_empresa" name="estado_empresa"></select>
+            </div>
           </div>
           <div class="form-field">
-            <label for="razao_social">Razão Social *</label>
-            <input type="text" id="razao_social" name="razao_social" required>
+            <label>Segmento da Empresa *</label>
+            <div class="segmento-options" id="segmento-options">
+              <label class="segmento-opt" data-val="Comércio">
+                <input type="radio" name="segmento" value="Comércio">🏬 Comércio
+              </label>
+              <label class="segmento-opt" data-val="Serviços">
+                <input type="radio" name="segmento" value="Serviços">🤝 Serviços
+              </label>
+              <label class="segmento-opt" data-val="Turismo">
+                <input type="radio" name="segmento" value="Turismo">🧭 Turismo
+              </label>
+            </div>
           </div>
         </div>
 
-        <div class="form-row">
-          <div class="form-field">
-            <label for="cnpj">CNPJ *</label>
-            <input type="text" id="cnpj" name="cnpj" placeholder="00.000.000/0000-00" required>
+        <div id="campos-cidade" style="display:none;">
+          <div class="form-row">
+            <div class="form-field">
+              <label for="municipio">Nome do Município *</label>
+              <input type="text" id="municipio" name="municipio">
+            </div>
+            <div class="form-field">
+              <label for="estado_cidade">Estado *</label>
+              <select id="estado_cidade" name="estado_cidade"></select>
+            </div>
           </div>
-          <div class="form-field">
-            <label for="respondente">Nome do Respondente *</label>
-            <input type="text" id="respondente" name="respondente" required>
+          <div class="form-row">
+            <div class="form-field">
+              <label for="razao_social_cidade">Razão Social *</label>
+              <input type="text" id="razao_social_cidade" name="razao_social_cidade" placeholder="Ex: Prefeitura Municipal de...">
+            </div>
+            <div class="form-field">
+              <label for="cnpj_cidade">CNPJ *</label>
+              <input type="text" id="cnpj_cidade" name="cnpj_cidade" placeholder="00.000.000/0000-00">
+            </div>
           </div>
-        </div>
-
-        <div class="form-row">
-          <div class="form-field">
-            <label for="email">E-mail *</label>
-            <input type="email" id="email" name="email" required>
+          <div class="form-row">
+            <div class="form-field">
+              <label for="respondente_cidade">Nome do Respondente *</label>
+              <input type="text" id="respondente_cidade" name="respondente_cidade">
+            </div>
+            <div class="form-field">
+              <label for="cargo_cidade">Cargo do Respondente *</label>
+              <input type="text" id="cargo_cidade" name="cargo_cidade" placeholder="Ex: Secretário de Turismo">
+            </div>
           </div>
-          <div class="form-field">
-            <label for="telefone">Telefone *</label>
-            <input type="tel" id="telefone" name="telefone" placeholder="(00) 00000-0000" required>
-          </div>
-        </div>
-
-        <div class="form-row">
-          <div class="form-field">
-            <label for="cidade">Cidade *</label>
-            <input type="text" id="cidade" name="cidade" required>
-          </div>
-          <div class="form-field">
-            <label for="estado">Estado *</label>
-            <select id="estado" name="estado" required>
-              <option value="">Selecione...</option>
-              <option>AC</option><option>AL</option><option>AP</option><option>AM</option><option>BA</option>
-              <option>CE</option><option>DF</option><option>ES</option><option>GO</option><option>MA</option>
-              <option>MT</option><option>MS</option><option>MG</option><option>PA</option><option>PB</option>
-              <option>PR</option><option>PE</option><option>PI</option><option>RJ</option><option>RN</option>
-              <option>RS</option><option>RO</option><option>RR</option><option>SC</option><option>SP</option>
-              <option>SE</option><option>TO</option>
-            </select>
-          </div>
-        </div>
-
-        <div class="form-field">
-          <label>Segmento da Empresa *</label>
-          <div class="segmento-options" id="segmento-options">
-            <label class="segmento-opt" data-val="Comércio">
-              <input type="radio" name="segmento" value="Comércio">🏬 Comércio
-            </label>
-            <label class="segmento-opt" data-val="Serviços">
-              <input type="radio" name="segmento" value="Serviços">🤝 Serviços
-            </label>
-            <label class="segmento-opt" data-val="Turismo">
-              <input type="radio" name="segmento" value="Turismo">🧭 Turismo
-            </label>
+          <div class="form-row">
+            <div class="form-field">
+              <label for="email_cidade">E-mail *</label>
+              <input type="email" id="email_cidade" name="email_cidade">
+            </div>
+            <div class="form-field">
+              <label for="telefone_cidade">Telefone *</label>
+              <input type="tel" id="telefone_cidade" name="telefone_cidade" placeholder="(00) 00000-0000">
+            </div>
           </div>
         </div>
 
@@ -104,9 +138,26 @@
   </div>
 </section>
 
-<footer class="site-footer">Diagnóstico ESG · Autoavaliação de Sustentabilidade para Comércio, Serviços e Turismo</footer>
+<footer class="site-footer">Diagnóstico ESG · Autoavaliação de Sustentabilidade para Empresas e Municípios</footer>
 
 <script>
+const UFS = ['AC','AL','AP','AM','BA','CE','DF','ES','GO','MA','MT','MS','MG','PA','PB','PR','PE','PI','RJ','RN','RS','RO','RR','SC','SP','SE','TO'];
+['estado_empresa','estado_cidade'].forEach(id => {
+  const sel = document.getElementById(id);
+  sel.innerHTML = '<option value="">Selecione...</option>' + UFS.map(uf => `<option>${uf}</option>`).join('');
+});
+
+const params = new URLSearchParams(window.location.search);
+const tipo = params.get('tipo') === 'cidade' ? 'cidade' : 'empresa';
+sessionStorage.setItem('tipo', tipo);
+
+if (tipo === 'cidade') {
+  document.getElementById('titulo-form').textContent = 'Antes de começar, conte um pouco sobre o município';
+  document.getElementById('subtitulo-form').textContent = 'Esses dados identificam o destino avaliado e servem para contato futuro. Leva menos de 1 minuto.';
+  document.getElementById('campos-empresa').style.display = 'none';
+  document.getElementById('campos-cidade').style.display = 'block';
+}
+
 document.querySelectorAll('.segmento-opt').forEach(opt => {
   opt.addEventListener('click', () => {
     document.querySelectorAll('.segmento-opt').forEach(o => o.classList.remove('selected'));
@@ -123,24 +174,43 @@ form.addEventListener('submit', async (e) => {
   e.preventDefault();
   erroMsg.style.display = 'none';
 
-  const segmentoEl = form.querySelector('input[name="segmento"]:checked');
-  if (!segmentoEl) {
-    erroMsg.textContent = 'Selecione o segmento da sua empresa.';
-    erroMsg.style.display = 'block';
-    return;
-  }
+  let payload;
+  let nomeParaSessao;
 
-  const payload = {
-    empresa: form.empresa.value.trim(),
-    razao_social: form.razao_social.value.trim(),
-    cnpj: form.cnpj.value.trim(),
-    respondente: form.respondente.value.trim(),
-    email: form.email.value.trim(),
-    telefone: form.telefone.value.trim(),
-    cidade: form.cidade.value.trim(),
-    estado: form.estado.value,
-    segmento: segmentoEl.value,
-  };
+  if (tipo === 'cidade') {
+    payload = {
+      tipo: 'cidade',
+      municipio: form.municipio.value.trim(),
+      estado: form.estado_cidade.value,
+      razao_social: form.razao_social_cidade.value.trim(),
+      cnpj: form.cnpj_cidade.value.trim(),
+      respondente: form.respondente_cidade.value.trim(),
+      cargo: form.cargo_cidade.value.trim(),
+      email: form.email_cidade.value.trim(),
+      telefone: form.telefone_cidade.value.trim(),
+    };
+    nomeParaSessao = payload.municipio;
+  } else {
+    const segmentoEl = form.querySelector('input[name="segmento"]:checked');
+    if (!segmentoEl) {
+      erroMsg.textContent = 'Selecione o segmento da sua empresa.';
+      erroMsg.style.display = 'block';
+      return;
+    }
+    payload = {
+      tipo: 'empresa',
+      empresa: form.empresa.value.trim(),
+      razao_social: form.razao_social_empresa.value.trim(),
+      cnpj: form.cnpj_empresa.value.trim(),
+      respondente: form.respondente_empresa.value.trim(),
+      email: form.email_empresa.value.trim(),
+      telefone: form.telefone_empresa.value.trim(),
+      cidade: form.cidade_empresa.value.trim(),
+      estado: form.estado_empresa.value,
+      segmento: segmentoEl.value,
+    };
+    nomeParaSessao = payload.empresa;
+  }
 
   btn.disabled = true;
   btn.textContent = 'Enviando...';
@@ -155,8 +225,8 @@ form.addEventListener('submit', async (e) => {
     if (!resp.ok) throw new Error(data.error || 'Erro ao enviar dados');
 
     sessionStorage.setItem('leadId', data.leadId);
-    sessionStorage.setItem('leadEmpresa', payload.empresa);
-    window.location.href = 'assessment.html';
+    sessionStorage.setItem('leadNome', nomeParaSessao);
+    window.location.href = `assessment.html?tipo=${tipo}`;
   } catch (err) {
     erroMsg.textContent = err.message;
     erroMsg.style.display = 'block';
