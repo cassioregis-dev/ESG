@@ -40,7 +40,6 @@ a { color: var(--teal); }
   padding: 0 24px;
 }
 
-/* ---------- Topbar ---------- */
 .topbar {
   background: var(--verde-escuro);
   color: var(--branco);
@@ -51,7 +50,6 @@ a { color: var(--teal); }
 .brand svg { flex-shrink: 0; }
 .topbar nav a { color: var(--verde-claro); text-decoration: none; font-size: .92rem; }
 
-/* ---------- Hero ---------- */
 .hero {
   background: linear-gradient(135deg, var(--verde-escuro), var(--teal));
   color: var(--branco);
@@ -65,7 +63,6 @@ a { color: var(--teal); }
 .hero .badges { display: flex; gap: 14px; margin-top: 28px; flex-wrap: wrap; }
 .hero .badge-item { background: rgba(255,255,255,.12); border: 1px solid rgba(255,255,255,.35); padding: 8px 16px; border-radius: 30px; font-size: .88rem; display: flex; align-items: center; gap: 8px; }
 
-/* ---------- Buttons ---------- */
 .btn {
   display: inline-flex;
   align-items: center;
@@ -88,7 +85,6 @@ a { color: var(--teal); }
 .btn-block { width: 100%; justify-content: center; }
 .btn:disabled { opacity: .55; cursor: not-allowed; transform: none; }
 
-/* ---------- Sections / cards ---------- */
 .section { padding: 64px 0; }
 .card {
   background: var(--branco);
@@ -131,7 +127,6 @@ a { color: var(--teal); }
   gap: 8px;
 }
 
-/* ---------- Forms ---------- */
 label { display: block; font-weight: 700; font-size: .88rem; margin-bottom: 6px; color: var(--texto); }
 input[type=text], input[type=email], input[type=tel], select {
   width: 100%;
@@ -166,7 +161,26 @@ input:focus, select:focus { outline: none; border-color: var(--verde); box-shado
 .segmento-opt input { display: none; }
 .segmento-opt.selected { border-color: var(--verde); background: var(--verde-suave); color: var(--verde-escuro); }
 
-/* ---------- Assessment ---------- */
+.tipo-options { display: flex; gap: 20px; flex-wrap: wrap; margin-top: 32px; }
+.tipo-card {
+  flex: 1;
+  min-width: 220px;
+  background: var(--branco);
+  border: 2px solid var(--borda);
+  border-radius: var(--raio);
+  padding: 28px 24px;
+  text-align: center;
+  cursor: pointer;
+  text-decoration: none;
+  color: var(--texto);
+  transition: all .15s ease;
+  box-shadow: var(--sombra);
+}
+.tipo-card:hover { border-color: var(--verde); transform: translateY(-2px); }
+.tipo-card .icone { font-size: 2.2rem; margin-bottom: 10px; }
+.tipo-card h3 { margin-bottom: 6px; }
+.tipo-card p { color: var(--texto-suave); font-size: .88rem; margin: 0; }
+
 .progress-wrap { background: var(--borda); border-radius: 30px; height: 10px; overflow: hidden; margin: 18px 0 30px; }
 .progress-bar { background: linear-gradient(90deg, var(--verde), var(--teal)); height: 100%; width: 0%; transition: width .3s ease; }
 .pilar-header {
@@ -198,7 +212,6 @@ input:focus, select:focus { outline: none; border-color: var(--verde); box-shado
 }
 .sticky-footer .container { display: flex; justify-content: space-between; align-items: center; gap: 16px; }
 
-/* ---------- Result ---------- */
 .resultado-hero { text-align: center; padding: 48px 0; }
 .nota-circulo {
   width: 190px; height: 190px; border-radius: 50%;
@@ -218,12 +231,11 @@ input:focus, select:focus { outline: none; border-color: var(--verde); box-shado
   background: var(--verde-suave); color: var(--verde-escuro);
 }
 .pilar-bar-row { display: flex; align-items: center; gap: 14px; margin-bottom: 16px; }
-.pilar-bar-row .nome { width: 130px; font-weight: 700; font-size: .88rem; flex-shrink: 0; }
+.pilar-bar-row .nome { width: 180px; font-weight: 700; font-size: .85rem; flex-shrink: 0; }
 .pilar-bar-track { flex: 1; background: var(--borda); border-radius: 20px; height: 16px; overflow: hidden; }
 .pilar-bar-fill { background: linear-gradient(90deg, var(--verde), var(--teal)); height: 100%; }
 .pilar-bar-row .pct { width: 50px; text-align: right; font-weight: 700; font-size: .85rem; color: var(--verde-escuro); flex-shrink: 0; }
 
-/* ---------- Admin ---------- */
 .login-wrap { min-height: 80vh; display: flex; align-items: center; justify-content: center; }
 .login-card { width: 100%; max-width: 380px; }
 .stat-card { text-align: center; }
@@ -236,6 +248,14 @@ tr:hover td { background: #fafcf9; }
 .table-wrap { overflow-x: auto; max-height: 520px; overflow-y: auto; border-radius: 12px; border: 1px solid var(--borda); }
 .tag { padding: 4px 10px; border-radius: 20px; font-size: .75rem; font-weight: 700; }
 .topbar-admin { display: flex; justify-content: space-between; align-items: center; margin-bottom: 28px; }
+
+.admin-tabs { display: flex; gap: 8px; margin-bottom: 28px; border-bottom: 2px solid var(--borda); }
+.admin-tab {
+  padding: 12px 22px; font-weight: 700; font-family: 'Poppins', sans-serif; font-size: .95rem;
+  color: var(--texto-suave); cursor: pointer; border: none; background: none;
+  border-bottom: 3px solid transparent; margin-bottom: -2px;
+}
+.admin-tab.active { color: var(--verde-escuro); border-bottom-color: var(--verde); }
 
 footer.site-footer { text-align: center; padding: 32px 0; color: var(--texto-suave); font-size: .85rem; }
 
