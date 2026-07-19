@@ -261,3 +261,20 @@ footer.site-footer { text-align: center; padding: 32px 0; color: var(--texto-sua
 
 .spinner { border: 3px solid var(--verde-suave); border-top-color: var(--verde); border-radius: 50%; width: 32px; height: 32px; animation: spin 0.8s linear infinite; margin: 40px auto; }
 @keyframes spin { to { transform: rotate(360deg); } }
+.btn-ghost { background: transparent; color: var(--verde-escuro); border: 2px solid var(--borda); }
+.btn-ghost:hover { border-color: var(--verde); background: var(--verde-suave); }
+.tema-nav { display: flex; gap: 8px; flex-wrap: wrap; margin: 24px 0; }
+.tema-pill {
+  padding: 8px 16px;
+  border-radius: 30px;
+  font-size: .8rem;
+  font-weight: 700;
+  border: 1.5px solid var(--borda);
+  background: var(--branco);
+  color: var(--texto-suave);
+  cursor: pointer;
+  transition: all .15s ease;
+}
+.tema-pill.completo { border-color: var(--verde-claro); color: var(--verde-escuro); background: var(--verde-suave); }
+.tema-pill.completo::before { content: "✓ "; }
+.tema-pill.active { background: var(--verde-escuro); border-color: var(--verde-escuro); color: var(--branco); }
