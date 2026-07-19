@@ -28,13 +28,18 @@
       <button class="btn btn-primary" id="btn-csv">Exportar CSV</button>
     </div>
 
+    <div class="admin-tabs">
+      <button type="button" class="admin-tab active" data-tipo="empresa">Empresas</button>
+      <button type="button" class="admin-tab" data-tipo="cidade">Cidades</button>
+    </div>
+
     <div id="loading" class="spinner"></div>
 
     <div id="conteudo" style="display:none;">
       <div class="grid-3" style="margin-bottom:32px;">
         <div class="card stat-card">
           <div class="valor" id="total-respondentes">0</div>
-          <div class="rotulo">Empresas avaliadas</div>
+          <div class="rotulo" id="rotulo-total">Empresas avaliadas</div>
         </div>
         <div class="card stat-card">
           <div class="valor" id="media-nota">0%</div>
@@ -52,24 +57,19 @@
           <canvas id="pilar-chart" height="220"></canvas>
         </div>
         <div class="card">
-          <h3>Empresas por segmento</h3>
-          <canvas id="segmento-chart" height="220"></canvas>
+          <h3 id="titulo-grupo-chart">Empresas por segmento</h3>
+          <canvas id="grupo-chart" height="220"></canvas>
         </div>
       </div>
 
       <div class="card">
         <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px; flex-wrap:wrap; gap:12px;">
-          <h3 style="margin:0;">Todas as respostas (leads)</h3>
-          <input type="text" id="busca" placeholder="Buscar por empresa, cidade, e-mail..." style="max-width:280px;">
+          <h3 style="margin:0;" id="titulo-tabela">Todas as respostas (leads)</h3>
+          <input type="text" id="busca" placeholder="Buscar..." style="max-width:280px;">
         </div>
         <div class="table-wrap">
           <table>
-            <thead>
-              <tr>
-                <th>Empresa</th><th>CNPJ</th><th>Respondente</th><th>E-mail</th><th>Telefone</th>
-                <th>Cidade/UF</th><th>Segmento</th><th>Nota</th><th>Classificação</th><th>Data</th>
-              </tr>
-            </thead>
+            <thead id="tabela-head"></thead>
             <tbody id="tabela-body"></tbody>
           </table>
         </div>
@@ -82,7 +82,11 @@
 function escapeHtml(str) {
   return String(str).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 }
+
 let STATS = null;
+let tipoAtual = 'empresa';
+let chartPilar = null;
+let chartGrupo = null;
 
 async function checkAuth() {
   const resp = await fetch('/api/admin/check');
@@ -93,15 +97,47 @@ async function checkAuth() {
 const CORES_CLASSIFICACAO = {
   'Iniciante': '#c0392b', 'Emergente': '#d68910', 'Comprometida': '#d4ac0d',
   'Sustentável': '#2e7d32', 'Referência': '#00796b', 'Excelência ESG': '#1b5e20',
+  'Inicial': '#c0392b', 'Básico': '#d68910', 'Em Desenvolvimento': '#d4ac0d',
+  'Avançado': '#00796b', 'Destino de Excelência': '#1b5e20',
 };
 
-async function loadStats() {
-  const resp = await fetch('/api/admin/stats');
+const COLUNAS = {
+  empresa: [
+    { titulo: 'Empresa', campo: r => r.lead.empresa },
+    { titulo: 'CNPJ', campo: r => r.lead.cnpj },
+    { titulo: 'Respondente', campo: r => r.lead.respondente },
+    { titulo: 'E-mail', campo: r => r.lead.email },
+    { titulo: 'Telefone', campo: r => r.lead.telefone },
+    { titulo: 'Cidade/UF', campo: r => `${r.lead.cidade}/${r.lead.estado}` },
+    { titulo: 'Segmento', campo: r => r.lead.segmento },
+  ],
+  cidade: [
+    { titulo: 'Município', campo: r => r.lead.municipio },
+    { titulo: 'Estado', campo: r => r.lead.estado },
+    { titulo: 'Razão Social', campo: r => r.lead.razaoSocial },
+    { titulo: 'CNPJ', campo: r => r.lead.cnpj },
+    { titulo: 'Respondente', campo: r => r.lead.respondente },
+    { titulo: 'Cargo', campo: r => r.lead.cargo },
+    { titulo: 'E-mail', campo: r => r.lead.email },
+    { titulo: 'Telefone', campo: r => r.lead.telefone },
+  ],
+};
+
+async function loadStats(tipo) {
+  tipoAtual = tipo;
+  document.getElementById('loading').style.display = 'block';
+  document.getElementById('conteudo').style.display = 'none';
+
+  const resp = await fetch(`/api/admin/stats?tipo=${tipo}`);
   if (resp.status === 401) { window.location.href = 'login.html'; return; }
   STATS = await resp.json();
 
   document.getElementById('loading').style.display = 'none';
   document.getElementById('conteudo').style.display = 'block';
+
+  document.getElementById('rotulo-total').textContent = tipo === 'cidade' ? 'Municípios avaliados' : 'Empresas avaliadas';
+  document.getElementById('titulo-grupo-chart').textContent = tipo === 'cidade' ? 'Municípios por estado' : 'Empresas por segmento';
+  document.getElementById('titulo-tabela').textContent = tipo === 'cidade' ? 'Todas as respostas (municípios)' : 'Todas as respostas (empresas)';
 
   document.getElementById('total-respondentes').textContent = STATS.totalRespondentes;
   document.getElementById('media-nota').textContent = STATS.mediaNotaFinal + '%';
@@ -110,7 +146,8 @@ async function loadStats() {
   const topClass = Object.entries(porClass).sort((a,b) => b[1]-a[1])[0];
   document.getElementById('classificacao-top').textContent = topClass ? topClass[0] : '-';
 
-  new Chart(document.getElementById('pilar-chart'), {
+  if (chartPilar) chartPilar.destroy();
+  chartPilar = new Chart(document.getElementById('pilar-chart'), {
     type: 'bar',
     data: {
       labels: STATS.mediaPorPilar.map(p => p.pilar),
@@ -119,49 +156,56 @@ async function loadStats() {
     options: { indexAxis: 'y', scales: { x: { min: 0, max: 100 } }, plugins: { legend: { display: false } } },
   });
 
-  new Chart(document.getElementById('segmento-chart'), {
+  if (chartGrupo) chartGrupo.destroy();
+  chartGrupo = new Chart(document.getElementById('grupo-chart'), {
     type: 'doughnut',
     data: {
-      labels: STATS.resumoSegmento.map(s => `${s.segmento} (${s.total})`),
-      datasets: [{ data: STATS.resumoSegmento.map(s => s.total), backgroundColor: ['#2e7d32', '#00796b', '#c17a3f', '#66bb6a'] }],
+      labels: STATS.resumoGrupo.map(s => `${s.grupo} (${s.total})`),
+      datasets: [{ data: STATS.resumoGrupo.map(s => s.total), backgroundColor: ['#2e7d32', '#00796b', '#c17a3f', '#66bb6a', '#d4ac0d', '#8e44ad'] }],
     },
   });
+
+  const head = document.getElementById('tabela-head');
+  const colunas = COLUNAS[tipo];
+  head.innerHTML = `<tr>${colunas.map(c => `<th>${c.titulo}</th>`).join('')}<th>Nota</th><th>Classificação</th><th>Data</th></tr>`;
 
   renderTabela(STATS.submissions);
 }
 
 function renderTabela(submissions) {
   const body = document.getElementById('tabela-body');
+  const colunas = COLUNAS[tipoAtual];
+  const nColunas = colunas.length + 3;
   body.innerHTML = submissions.map(s => `
     <tr>
-      <td>${escapeHtml(s.lead.empresa)}</td>
-      <td>${escapeHtml(s.lead.cnpj)}</td>
-      <td>${escapeHtml(s.lead.respondente)}</td>
-      <td>${escapeHtml(s.lead.email)}</td>
-      <td>${escapeHtml(s.lead.telefone)}</td>
-      <td>${escapeHtml(s.lead.cidade)}/${escapeHtml(s.lead.estado)}</td>
-      <td>${escapeHtml(s.lead.segmento)}</td>
+      ${colunas.map(c => `<td>${escapeHtml(c.campo(s) ?? '')}</td>`).join('')}
       <td><strong>${s.notaFinal}%</strong></td>
       <td><span class="tag" style="background:${(CORES_CLASSIFICACAO[s.classificacao]||'#2e7d32')}22; color:${CORES_CLASSIFICACAO[s.classificacao]||'#2e7d32'};">${escapeHtml(s.classificacao)}</span></td>
-      <td>${new Date(s.submittedAt.replace(' ', 'T') + 'Z').toLocaleDateString('pt-BR')}</td>
+      <td>${new Date(s.submittedAt).toLocaleDateString('pt-BR')}</td>
     </tr>
-  `).join('') || '<tr><td colspan="10" style="text-align:center; color:var(--texto-suave);">Nenhuma resposta ainda.</td></tr>';
+  `).join('') || `<tr><td colspan="${nColunas}" style="text-align:center; color:var(--texto-suave);">Nenhuma resposta ainda.</td></tr>`;
 }
 
 document.getElementById('busca').addEventListener('input', (e) => {
   const termo = e.target.value.toLowerCase();
   if (!STATS) return;
+  const colunas = COLUNAS[tipoAtual];
   const filtradas = STATS.submissions.filter(s =>
-    s.lead.empresa.toLowerCase().includes(termo) ||
-    s.lead.cidade.toLowerCase().includes(termo) ||
-    s.lead.email.toLowerCase().includes(termo) ||
-    s.lead.segmento.toLowerCase().includes(termo)
+    colunas.some(c => String(c.campo(s) || '').toLowerCase().includes(termo))
   );
   renderTabela(filtradas);
 });
 
+document.querySelectorAll('.admin-tab').forEach(tab => {
+  tab.addEventListener('click', () => {
+    document.querySelectorAll('.admin-tab').forEach(t => t.classList.remove('active'));
+    tab.classList.add('active');
+    loadStats(tab.dataset.tipo);
+  });
+});
+
 document.getElementById('btn-csv').addEventListener('click', () => {
-  window.location.href = '/api/admin/export.csv';
+  window.location.href = `/api/admin/export.csv?tipo=${tipoAtual}`;
 });
 
 document.getElementById('btn-logout').addEventListener('click', async (e) => {
@@ -170,7 +214,7 @@ document.getElementById('btn-logout').addEventListener('click', async (e) => {
   window.location.href = 'login.html';
 });
 
-checkAuth().then(loadStats);
+checkAuth().then(() => loadStats('empresa'));
 </script>
 
 </body>
