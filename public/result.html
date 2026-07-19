@@ -58,20 +58,20 @@
       </div>
 
       <div class="card" style="text-align:center; background:linear-gradient(135deg, var(--verde-suave), var(--branco)); border-color:var(--verde-claro);">
-        <h3>Quer ajuda para melhorar os resultados de sustentabilidade da sua empresa?</h3>
+        <h3 id="cta-titulo">Quer ajuda para melhorar os resultados de sustentabilidade?</h3>
         <p style="color:var(--texto-suave); max-width:520px; margin:0 auto 20px;">Fale com a gente pelo WhatsApp — vamos te ajudar a evoluir em cada um dos temas avaliados.</p>
         <a href="#" id="btn-whatsapp" target="_blank" class="btn btn-primary">Falar no WhatsApp →</a>
       </div>
 
       <div style="text-align:center; margin-top:36px;">
-        <p style="color:var(--texto-suave);">Obrigado por participar! Sua resposta ajuda a construir um panorama de sustentabilidade do setor.</p>
+        <p style="color:var(--texto-suave);">Obrigado por participar! Sua resposta ajuda a construir um panorama de sustentabilidade da região.</p>
         <a href="index.html" class="btn btn-secondary" style="border:2px solid var(--verde); color:var(--verde-escuro);">Voltar à página inicial</a>
       </div>
     </div>
   </section>
 </div>
 
-<footer class="site-footer">Diagnóstico ESG · Autoavaliação de Sustentabilidade para Comércio, Serviços e Turismo</footer>
+<footer class="site-footer">Diagnóstico ESG · Autoavaliação de Sustentabilidade para Empresas e Municípios</footer>
 
 <script>
 const params = new URLSearchParams(window.location.search);
@@ -86,17 +86,27 @@ async function load() {
   document.getElementById('loading').style.display = 'none';
   document.getElementById('conteudo').style.display = 'block';
 
-  const nomeEmpresa = data.lead ? data.lead.empresa : '';
-  document.getElementById('empresa-nome').textContent = data.lead ? `${data.lead.empresa} · ${data.lead.segmento} · ${data.lead.cidade}/${data.lead.estado}` : '';
-  document.getElementById('empresa-rodape').textContent = nomeEmpresa;
+  const tipo = data.tipo === 'cidade' ? 'cidade' : 'empresa';
+  const nome = data.lead ? data.lead.nome : '';
+  const detalhe = data.lead
+    ? (tipo === 'cidade' ? `${data.lead.nome} · ${data.lead.estado}` : `${data.lead.nome} · ${data.lead.segmento} · ${data.lead.cidade}/${data.lead.estado}`)
+    : '';
+
+  document.getElementById('empresa-nome').textContent = detalhe;
+  document.getElementById('empresa-rodape').textContent = nome;
   document.getElementById('data-rodape').textContent = new Date(data.createdAt).toLocaleDateString('pt-BR');
   document.getElementById('nota-num').textContent = data.notaFinal + '%';
   document.getElementById('nota-circulo').style.setProperty('--pct', data.notaFinal);
   document.getElementById('classificacao-badge').textContent = data.classificacao;
+  document.getElementById('cta-titulo').textContent = tipo === 'cidade'
+    ? 'Quer ajuda para melhorar os resultados de sustentabilidade do seu município?'
+    : 'Quer ajuda para melhorar os resultados de sustentabilidade da sua empresa?';
 
   const cores = {
     'Iniciante': '#c0392b', 'Emergente': '#d68910', 'Comprometida': '#d4ac0d',
     'Sustentável': '#2e7d32', 'Referência': '#00796b', 'Excelência ESG': '#1b5e20',
+    'Inicial': '#c0392b', 'Básico': '#d68910', 'Em Desenvolvimento': '#d4ac0d',
+    'Avançado': '#00796b', 'Destino de Excelência': '#1b5e20',
   };
   document.getElementById('classificacao-badge').style.background = (cores[data.classificacao] || '#2e7d32') + '22';
   document.getElementById('classificacao-badge').style.color = cores[data.classificacao] || '#2e7d32';
@@ -111,7 +121,8 @@ async function load() {
       </div>`;
   });
 
-  const mensagem = encodeURIComponent(`Olá! Fiz o Diagnóstico ESG da minha empresa (${nomeEmpresa}), tive nota ${data.notaFinal}% (${data.classificacao}), e gostaria de ajuda para melhorar meus resultados de sustentabilidade.`);
+  const referencia = tipo === 'cidade' ? `do município (${nome})` : `da minha empresa (${nome})`;
+  const mensagem = encodeURIComponent(`Olá! Fiz o Diagnóstico ESG ${referencia}, tive nota ${data.notaFinal}% (${data.classificacao}), e gostaria de ajuda para melhorar os resultados de sustentabilidade.`);
   document.getElementById('btn-whatsapp').href = `https://wa.me/5567999129003?text=${mensagem}`;
 
   document.getElementById('btn-baixar-imagem').addEventListener('click', async () => {
@@ -126,7 +137,7 @@ async function load() {
         useCORS: true,
       });
       const link = document.createElement('a');
-      const nomeArquivo = (nomeEmpresa || 'resultado').replace(/[^a-zA-Z0-9]+/g, '_');
+      const nomeArquivo = (nome || 'resultado').replace(/[^a-zA-Z0-9]+/g, '_');
       link.download = `diagnostico-esg-${nomeArquivo}.png`;
       link.href = canvas.toDataURL('image/png');
       link.click();
