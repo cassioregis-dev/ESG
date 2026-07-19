@@ -4,7 +4,12 @@ const express = require('express');
 const session = require('express-session');
 
 const { pool, initDb } = require('./db/init');
-const { QUESTIONS, ESCALA, PILARES_ORDEM, classificar, PONTUACAO_MAXIMA } = require('./data/questions');
+const {
+  QUESTIONS, ESCALA, PILARES_ORDEM, classificar, PONTUACAO_MAXIMA,
+} = require('./data/questions');
+const {
+  QUESTIONS_CIDADE, ESCALA_CIDADE, PILARES_ORDEM_CIDADE, classificarCidade, PONTUACAO_MAXIMA_CIDADE,
+} = require('./data/cidades-questions');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -24,12 +29,36 @@ function requireAdmin(req, res, next) {
   return res.status(401).json({ error: 'Não autenticado' });
 }
 
-function computeScore(respostas) {
-  // respostas: { [questionId]: 0..5 }
-  const pilaresAgg = {}; // pilar -> { obtidos, maximo }
+function normalizarTipo(tipo) {
+  return tipo === 'cidade' ? 'cidade' : 'empresa';
+}
+
+function getQuestionSet(tipo) {
+  if (tipo === 'cidade') {
+    return {
+      questions: QUESTIONS_CIDADE,
+      escala: ESCALA_CIDADE,
+      pilaresOrdem: PILARES_ORDEM_CIDADE,
+      classificar: classificarCidade,
+      pontuacaoMaxima: PONTUACAO_MAXIMA_CIDADE,
+    };
+  }
+  return {
+    questions: QUESTIONS,
+    escala: ESCALA,
+    pilaresOrdem: PILARES_ORDEM,
+    classificar,
+    pontuacaoMaxima: PONTUACAO_MAXIMA,
+  };
+}
+
+function computeScore(respostas, tipo) {
+  const { questions, pilaresOrdem, classificar: classificarFn, pontuacaoMaxima } = getQuestionSet(tipo);
+
+  const pilaresAgg = {};
   let pontosObtidos = 0;
 
-  const respostasDetalhadas = QUESTIONS.map(q => {
+  const respostasDetalhadas = questions.map(q => {
     const respostaRaw = respostas[q.id];
     const resposta = Number.isFinite(Number(respostaRaw)) ? Math.max(0, Math.min(5, Number(respostaRaw))) : 0;
     const pontos = resposta * q.peso;
@@ -42,18 +71,18 @@ function computeScore(respostas) {
     return { id: q.id, pilar: q.pilar, pergunta: q.pergunta, peso: q.peso, resposta, pontos };
   });
 
-  const pilares = PILARES_ORDEM.map(nome => {
+  const pilares = pilaresOrdem.map(nome => {
     const agg = pilaresAgg[nome] || { obtidos: 0, maximo: 0 };
     const percentual = agg.maximo > 0 ? (agg.obtidos / agg.maximo) * 100 : 0;
     return { pilar: nome, obtidos: agg.obtidos, maximo: agg.maximo, percentual: Math.round(percentual * 10) / 10 };
   });
 
-  const notaFinal = Math.round((pontosObtidos / PONTUACAO_MAXIMA) * 1000) / 10; // 1 casa decimal
-  const classificacao = classificar(notaFinal);
+  const notaFinal = Math.round((pontosObtidos / pontuacaoMaxima) * 1000) / 10;
+  const classificacao = classificarFn(notaFinal);
 
   return {
     pontosObtidos,
-    pontosMaximo: PONTUACAO_MAXIMA,
+    pontosMaximo: pontuacaoMaxima,
     notaFinal,
     classificacao,
     pilares,
@@ -64,13 +93,35 @@ function computeScore(respostas) {
 // ---------- Public API ----------
 
 app.get('/api/questions', (req, res) => {
-  res.json({ questions: QUESTIONS, escala: ESCALA, pilares: PILARES_ORDEM });
+  const tipo = normalizarTipo(req.query.tipo);
+  const { questions, escala, pilaresOrdem } = getQuestionSet(tipo);
+  res.json({ tipo, questions, escala, pilares: pilaresOrdem });
 });
 
 app.post('/api/leads', async (req, res) => {
   try {
-    const { empresa, razao_social, cnpj, respondente, email, telefone, cidade, estado, segmento } = req.body || {};
+    const tipo = normalizarTipo(req.body && req.body.tipo);
+    const body = req.body || {};
 
+    if (tipo === 'cidade') {
+      const { municipio, razao_social, cnpj, respondente, cargo, email, telefone, estado } = body;
+      const required = { municipio, razao_social, cnpj, respondente, cargo, email, telefone, estado };
+      for (const [key, val] of Object.entries(required)) {
+        if (!val || String(val).trim() === '') {
+          return res.status(400).json({ error: `Campo obrigatório ausente: ${key}` });
+        }
+      }
+
+      const result = await pool.query(
+        `INSERT INTO leads (tipo, municipio, razao_social, cnpj, respondente, cargo, email, telefone, estado)
+         VALUES ('cidade', $1, $2, $3, $4, $5, $6, $7, $8) RETURNING id`,
+        [municipio, razao_social, cnpj, respondente, cargo, email, telefone, estado]
+      );
+      return res.json({ leadId: result.rows[0].id, tipo });
+    }
+
+    // tipo === 'empresa'
+    const { empresa, razao_social, cnpj, respondente, email, telefone, cidade, estado, segmento } = body;
     const required = { empresa, razao_social, cnpj, respondente, email, telefone, cidade, estado, segmento };
     for (const [key, val] of Object.entries(required)) {
       if (!val || String(val).trim() === '') {
@@ -83,12 +134,11 @@ app.post('/api/leads', async (req, res) => {
     }
 
     const result = await pool.query(
-      `INSERT INTO leads (empresa, razao_social, cnpj, respondente, email, telefone, cidade, estado, segmento)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) RETURNING id`,
+      `INSERT INTO leads (tipo, empresa, razao_social, cnpj, respondente, email, telefone, cidade, estado, segmento)
+       VALUES ('empresa', $1, $2, $3, $4, $5, $6, $7, $8, $9) RETURNING id`,
       [empresa, razao_social, cnpj, respondente, email, telefone, cidade, estado, segmento]
     );
-
-    res.json({ leadId: result.rows[0].id });
+    res.json({ leadId: result.rows[0].id, tipo });
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: 'Erro interno ao salvar lead' });
@@ -104,15 +154,18 @@ app.post('/api/submit', async (req, res) => {
     const lead = leadResult.rows[0];
     if (!lead) return res.status(404).json({ error: 'Lead não encontrado' });
 
+    const tipo = normalizarTipo(lead.tipo);
+    const { questions } = getQuestionSet(tipo);
+
     if (!respostas || typeof respostas !== 'object') {
       return res.status(400).json({ error: 'respostas é obrigatório' });
     }
-    const faltando = QUESTIONS.filter(q => !(q.id in respostas));
+    const faltando = questions.filter(q => !(q.id in respostas));
     if (faltando.length > 0) {
       return res.status(400).json({ error: 'Existem perguntas não respondidas', faltando: faltando.map(q => q.id) });
     }
 
-    const resultado = computeScore(respostas);
+    const resultado = computeScore(respostas, tipo);
 
     const insertResult = await pool.query(
       `INSERT INTO submissions (lead_id, pontos_obtidos, pontos_maximo, nota_final, classificacao, pilares_json, respostas_json)
@@ -143,9 +196,18 @@ app.get('/api/result/:id', async (req, res) => {
 
     const leadResult = await pool.query('SELECT * FROM leads WHERE id = $1', [submission.lead_id]);
     const lead = leadResult.rows[0];
+    const tipo = lead ? normalizarTipo(lead.tipo) : 'empresa';
+
+    let leadInfo = null;
+    if (lead) {
+      leadInfo = tipo === 'cidade'
+        ? { tipo, nome: lead.municipio, estado: lead.estado }
+        : { tipo, nome: lead.empresa, segmento: lead.segmento, cidade: lead.cidade, estado: lead.estado };
+    }
 
     res.json({
-      lead: lead ? { empresa: lead.empresa, segmento: lead.segmento, cidade: lead.cidade, estado: lead.estado } : null,
+      tipo,
+      lead: leadInfo,
       pontosObtidos: Number(submission.pontos_obtidos),
       pontosMaximo: Number(submission.pontos_maximo),
       notaFinal: Number(submission.nota_final),
@@ -186,15 +248,19 @@ app.get('/api/admin/check', (req, res) => {
 
 app.get('/api/admin/stats', requireAdmin, async (req, res) => {
   try {
+    const tipo = normalizarTipo(req.query.tipo);
+    const { pilaresOrdem } = getQuestionSet(tipo);
+
     const { rows } = await pool.query(`
       SELECT s.id as submission_id, s.nota_final, s.classificacao, s.pontos_obtidos, s.pontos_maximo,
              s.pilares_json, s.created_at as submitted_at,
-             l.id as lead_id, l.empresa, l.razao_social, l.cnpj, l.respondente, l.email, l.telefone,
-             l.cidade, l.estado, l.segmento, l.created_at as lead_created_at
+             l.id as lead_id, l.tipo, l.empresa, l.municipio, l.razao_social, l.cnpj, l.respondente, l.cargo,
+             l.email, l.telefone, l.cidade, l.estado, l.segmento, l.created_at as lead_created_at
       FROM submissions s
       JOIN leads l ON l.id = s.lead_id
+      WHERE l.tipo = $1
       ORDER BY s.created_at DESC
-    `);
+    `, [tipo]);
 
     const submissions = rows.map(r => ({
       submissionId: r.submission_id,
@@ -205,9 +271,10 @@ app.get('/api/admin/stats', requireAdmin, async (req, res) => {
       pilares: JSON.parse(r.pilares_json),
       submittedAt: r.submitted_at,
       lead: {
-        id: r.lead_id, empresa: r.empresa, razaoSocial: r.razao_social, cnpj: r.cnpj,
-        respondente: r.respondente, email: r.email, telefone: r.telefone,
-        cidade: r.cidade, estado: r.estado, segmento: r.segmento, createdAt: r.lead_created_at,
+        id: r.lead_id, tipo: r.tipo, empresa: r.empresa, municipio: r.municipio,
+        razaoSocial: r.razao_social, cnpj: r.cnpj, respondente: r.respondente, cargo: r.cargo,
+        email: r.email, telefone: r.telefone, cidade: r.cidade, estado: r.estado, segmento: r.segmento,
+        createdAt: r.lead_created_at,
       },
     }));
 
@@ -216,7 +283,7 @@ app.get('/api/admin/stats', requireAdmin, async (req, res) => {
       ? Math.round((submissions.reduce((s, x) => s + x.notaFinal, 0) / totalRespondentes) * 10) / 10
       : 0;
 
-    const mediaPorPilar = PILARES_ORDEM.map(nome => {
+    const mediaPorPilar = pilaresOrdem.map(nome => {
       const valores = submissions.map(s => {
         const p = s.pilares.find(p => p.pilar === nome);
         return p ? p.percentual : 0;
@@ -225,15 +292,17 @@ app.get('/api/admin/stats', requireAdmin, async (req, res) => {
       return { pilar: nome, media: Math.round(media * 10) / 10 };
     });
 
-    const porSegmento = {};
+    // agrupamento auxiliar: por segmento (empresas) ou por estado (cidades)
+    const agrupamentoChave = tipo === 'cidade' ? 'estado' : 'segmento';
+    const porGrupo = {};
     for (const s of submissions) {
-      const seg = s.lead.segmento;
-      if (!porSegmento[seg]) porSegmento[seg] = { count: 0, somaNota: 0 };
-      porSegmento[seg].count += 1;
-      porSegmento[seg].somaNota += s.notaFinal;
+      const chave = s.lead[agrupamentoChave] || '—';
+      if (!porGrupo[chave]) porGrupo[chave] = { count: 0, somaNota: 0 };
+      porGrupo[chave].count += 1;
+      porGrupo[chave].somaNota += s.notaFinal;
     }
-    const resumoSegmento = Object.entries(porSegmento).map(([segmento, v]) => ({
-      segmento, total: v.count, mediaNota: Math.round((v.somaNota / v.count) * 10) / 10,
+    const resumoGrupo = Object.entries(porGrupo).map(([grupo, v]) => ({
+      grupo, total: v.count, mediaNota: Math.round((v.somaNota / v.count) * 10) / 10,
     }));
 
     const porClassificacao = {};
@@ -242,10 +311,12 @@ app.get('/api/admin/stats', requireAdmin, async (req, res) => {
     }
 
     res.json({
+      tipo,
       totalRespondentes,
       mediaNotaFinal,
       mediaPorPilar,
-      resumoSegmento,
+      resumoGrupo,
+      agrupamentoChave,
       porClassificacao,
       submissions,
     });
@@ -257,29 +328,38 @@ app.get('/api/admin/stats', requireAdmin, async (req, res) => {
 
 app.get('/api/admin/export.csv', requireAdmin, async (req, res) => {
   try {
+    const tipo = normalizarTipo(req.query.tipo);
+    const { pilaresOrdem } = getQuestionSet(tipo);
+
     const { rows } = await pool.query(`
-      SELECT l.empresa, l.razao_social, l.cnpj, l.respondente, l.email, l.telefone, l.cidade, l.estado, l.segmento,
+      SELECT l.empresa, l.municipio, l.razao_social, l.cnpj, l.respondente, l.cargo, l.email, l.telefone,
+             l.cidade, l.estado, l.segmento,
              s.nota_final, s.classificacao, s.pilares_json, s.created_at
       FROM submissions s JOIN leads l ON l.id = s.lead_id
+      WHERE l.tipo = $1
       ORDER BY s.created_at DESC
-    `);
+    `, [tipo]);
 
-    const temaHeaders = PILARES_ORDEM.map(nome => `${nome} (%)`);
-    const header = ['Empresa', 'Razao Social', 'CNPJ', 'Respondente', 'Email', 'Telefone', 'Cidade', 'Estado', 'Segmento', 'Nota Final (%)', 'Classificacao', ...temaHeaders, 'Data'];
+    const temaHeaders = pilaresOrdem.map(nome => `${nome} (%)`);
+    const header = tipo === 'cidade'
+      ? ['Município', 'Estado', 'Razao Social', 'CNPJ', 'Respondente', 'Cargo', 'Email', 'Telefone', 'Nota Final (%)', 'Classificacao', ...temaHeaders, 'Data']
+      : ['Empresa', 'Razao Social', 'CNPJ', 'Respondente', 'Email', 'Telefone', 'Cidade', 'Estado', 'Segmento', 'Nota Final (%)', 'Classificacao', ...temaHeaders, 'Data'];
+
     const csvLines = [header.join(';')];
     for (const r of rows) {
       const temasArr = JSON.parse(r.pilares_json);
       const percentualPorTema = Object.fromEntries(temasArr.map(t => [t.pilar, t.percentual]));
-      const temaValores = PILARES_ORDEM.map(nome => (percentualPorTema[nome] !== undefined ? percentualPorTema[nome] : ''));
+      const temaValores = pilaresOrdem.map(nome => (percentualPorTema[nome] !== undefined ? percentualPorTema[nome] : ''));
 
-      csvLines.push([
-        r.empresa, r.razao_social, r.cnpj, r.respondente, r.email, r.telefone, r.cidade, r.estado, r.segmento,
-        r.nota_final, r.classificacao, ...temaValores, r.created_at,
-      ].map(v => `"${String(v).replace(/"/g, '""')}"`).join(';'));
+      const linha = tipo === 'cidade'
+        ? [r.municipio, r.estado, r.razao_social, r.cnpj, r.respondente, r.cargo, r.email, r.telefone, r.nota_final, r.classificacao, ...temaValores, r.created_at]
+        : [r.empresa, r.razao_social, r.cnpj, r.respondente, r.email, r.telefone, r.cidade, r.estado, r.segmento, r.nota_final, r.classificacao, ...temaValores, r.created_at];
+
+      csvLines.push(linha.map(v => `"${String(v).replace(/"/g, '""')}"`).join(';'));
     }
 
     res.setHeader('Content-Type', 'text/csv; charset=utf-8');
-    res.setHeader('Content-Disposition', 'attachment; filename="diagnostico_esg_leads.csv"');
+    res.setHeader('Content-Disposition', `attachment; filename="diagnostico_${tipo}_leads.csv"`);
     res.send('﻿' + csvLines.join('\n'));
   } catch (err) {
     console.error(err);
